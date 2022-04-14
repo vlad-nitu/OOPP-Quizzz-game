@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="commons.EmojiTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2022-04-08T17:55:22" hostname="Vlads-MacBook-Pro.local" time="0.025">
+  <properties/>
+  <testcase name="getType()" classname="commons.EmojiTest" time="0.021"/>
+  <testcase name="setPlayer()" classname="commons.EmojiTest" time="0.001"/>
+  <testcase name="getPlayer()" classname="commons.EmojiTest" time="0.001"/>
+  <testcase name="emptyConstructorTest()" classname="commons.EmojiTest" time="0.001"/>
+  <testcase name="setType()" classname="commons.EmojiTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

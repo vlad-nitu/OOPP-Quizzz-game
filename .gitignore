@@ -21,3 +21,71 @@
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+.DS_Store
+
+.gradle/7.3/dependencies-accessors/gc.properties
+
+.gradle/7.3/fileChanges/last-build.bin
+
+.gradle/7.3/gc.properties
+
+.gradle/vcs-1/gc.properties
+
+client/build/distributions/client-0.0.1-SNAPSHOT.tar
+
+client/build/resources/main/client/scenes/ActivityOverview.fxml
+
+client/build/resources/main/client/scenes/AddActivity.fxml
+
+client/build/resources/main/client/scenes/GameHowMuch.fxml
+
+client/build/resources/main/client/scenes/GameInsteadOf.fxml
+
+client/build/resources/main/client/scenes/GameMoreExpensive.fxml
+
+client/build/resources/main/client/scenes/GameWhichOne.fxml
+
+client/build/resources/main/client/scenes/LeaderBoard.fxml
+
+client/build/resources/main/client/scenes/Lobby.fxml
+
+client/build/resources/main/client/scenes/MPGameOver.fxml
+
+client/build/resources/main/client/scenes/Multiplayer.fxml
+
+client/build/resources/main/client/scenes/SinglePlayer.fxml
+
+client/build/resources/main/client/scenes/SinglePlayerGame.fxml
+
+client/build/resources/main/client/scenes/SinglePlayerGameOver.fxml
+
+client/build/resources/main/client/scenes/SplashScreen.fxml
+
+client/build/resources/main/images/background.jpeg
+
+client/build/resources/main/images/correct-answer.png
+
+client/build/resources/main/images/emojis/Heart Eyes Emoji.png
+
+client/build/resources/main/images/emojis/Loudly Crying Face Emoji.png
+
+client/build/resources/main/images/emojis/Sunglasses Emoji.png
+
+client/build/resources/main/images/emojis/Tears of Joy Emoji.png
+
+client/build/resources/main/images/emojis/Very Angry Emoji.png
+
+client/build/resources/main/images/timer.png
+
+client/build/resources/main/images/wrong-answer.png
+
+client/build/scripts/client
+
+client/build/scripts/client.bat
+
+client/build/tmp/compileJava/previous-compilation-data.bin
+
+client/build/tmp/compileTestJava/previous-compilation-data.bin
+
+client/build/tmp/jar/MANIFEST.MF

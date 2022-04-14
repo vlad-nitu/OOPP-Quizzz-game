@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SimpleUser.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">commons</a> &gt; <a href="index.source.html" class="el_package">commons.player</a> &gt; <span class="el_source">SimpleUser.java</span></div><h1>SimpleUser.java</h1><pre class="source lang-java linenums">package commons.player;
+
+import commons.GameInstance;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+
+import javax.persistence.*;
+
+
+/**
+ * To be mostly used for communication between client and server, since client doesn't need nearly as much info as put into Player class
+ */
+@Entity
+public class SimpleUser {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @Column(name = &quot;id&quot;)
+    private long id;
+
+    @Column(name = &quot;&quot;)
+    private int gameInstanceId;
+
+    @Column(name = &quot;name&quot;)
+    private String name;
+
+    @Column(name = &quot;score&quot;)
+    private int score;
+
+    @Column(name = &quot;cookie&quot;)
+    private String cookie;
+
+
+<span class="fc" id="L35">    public SimpleUser() {</span>
+
+<span class="fc" id="L37">    }</span>
+
+<span class="fc" id="L39">    public SimpleUser(String name, int score){</span>
+<span class="fc" id="L40">        this.name = name;</span>
+<span class="fc" id="L41">        this.score = score;</span>
+<span class="fc" id="L42">    }</span>
+
+<span class="nc" id="L44">    public SimpleUser(long id, String name, int gameInstanceId, String cookie) {</span>
+<span class="nc" id="L45">        this.name = name;</span>
+<span class="nc" id="L46">        this.id = id;</span>
+<span class="nc" id="L47">        this.gameInstanceId = gameInstanceId;</span>
+<span class="nc" id="L48">        this.cookie = cookie;</span>
+<span class="nc" id="L49">    }</span>
+
+    public String getName() {
+<span class="fc" id="L52">        return name;</span>
+    }
+
+    public void setName(String name) {
+<span class="nc" id="L56">        this.name = name;</span>
+<span class="nc" id="L57">    }</span>
+
+    public long getId() {
+<span class="nc" id="L60">        return id;</span>
+    }
+
+    public void setId(long id) {
+<span class="nc" id="L64">        this.id = id;</span>
+<span class="nc" id="L65">    }</span>
+
+    public int getScore() {
+<span class="nc" id="L68">        return score;</span>
+    }
+
+    public void setScore(int score) {
+<span class="nc" id="L72">        this.score = score;</span>
+<span class="nc" id="L73">    }</span>
+
+    public void addScore(int score) {
+<span class="nc" id="L76">        this.score += score;</span>
+<span class="nc" id="L77">    }</span>
+
+    public String getCookie() {
+<span class="nc" id="L80">        return cookie;</span>
+    }
+
+    public void setCookie(String cookie) {
+<span class="nc" id="L84">        this.cookie = cookie;</span>
+<span class="nc" id="L85">    }</span>
+
+    public int getGameInstanceId() {
+<span class="nc" id="L88">        return gameInstanceId;</span>
+    }
+
+    public void setGameInstanceId(int gameInstanceId) {
+<span class="nc" id="L92">        this.gameInstanceId = gameInstanceId;</span>
+<span class="nc" id="L93">    }</span>
+
+    @Override
+    public boolean equals(Object o) {
+<span class="nc bnc" id="L97" title="All 2 branches missed.">        if (this == o) return true;</span>
+
+<span class="nc bnc" id="L99" title="All 4 branches missed.">        if (o == null || getClass() != o.getClass()) return false;</span>
+
+<span class="nc" id="L101">        SimpleUser that = (SimpleUser) o;</span>
+
+<span class="nc" id="L103">        return new EqualsBuilder().append(id, that.id).append(score, that.score).append(name, that.name).append(cookie, that.cookie).isEquals();</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L108">        return new HashCodeBuilder(17, 37).append(id).append(name).append(score).append(cookie).toHashCode();</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L113">        return new ToStringBuilder(this)</span>
+<span class="nc" id="L114">                .append(&quot;id&quot;, id)</span>
+<span class="nc" id="L115">                .append(&quot;gameInstanceId&quot;, gameInstanceId)</span>
+<span class="nc" id="L116">                .append(&quot;name&quot;, name)</span>
+<span class="nc" id="L117">                .append(&quot;score&quot;, score)</span>
+<span class="nc" id="L118">                .append(&quot;cookie&quot;, cookie)</span>
+<span class="nc" id="L119">                .toString();</span>
+    }
+
+    public Player toPlayer(GameInstance gameInstance) {
+<span class="nc" id="L123">        return new Player(id, name, gameInstance, cookie);</span>
+    }
+
+    public SimpleUser unsafe() {
+<span class="nc" id="L127">        return new SimpleUser(id, name, gameInstanceId, null);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

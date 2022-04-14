@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>QuestionMoreExpensive.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">commons</a> &gt; <a href="index.source.html" class="el_package">commons</a> &gt; <span class="el_source">QuestionMoreExpensive.java</span></div><h1>QuestionMoreExpensive.java</h1><pre class="source lang-java linenums">package commons;
+
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+
+import java.util.Arrays;
+import java.util.Comparator;
+
+/**
+ * This is a multiple-choice type of question.
+ * This question type asks the user to choose from the 3 given activities the one that consumes the highest amount of energy.
+ * - Activity[3] activities: a list (fixed size 3) of Activity object instances, from which the user is asked to choose the
+ * one that he/she thinks is the most energy-consuming.
+ * - title: the title of this specific question, may be changed later to &quot;Choose which activity from these 3 you think
+ * it consumes the most energy: &quot;.
+ */
+public class QuestionMoreExpensive extends Question {
+
+<span class="nc" id="L20">    private Activity[] activities = new Activity[3];</span>
+
+<span class="nc" id="L22">    public QuestionMoreExpensive(Activity[] activities, int number) {</span>
+<span class="nc" id="L23">        this.setTitle(&quot;What requires more energy?&quot;);</span>
+<span class="nc" id="L24">        this.activities = activities;</span>
+<span class="nc" id="L25">        setNumber(number);</span>
+<span class="nc" id="L26">    }</span>
+
+<span class="nc" id="L28">    public QuestionMoreExpensive() {</span>
+<span class="nc" id="L29">    }</span>
+
+    /**
+     * Getter for the 3 activities provided to the user as options. He/she will be asked to choose which one he/she considers
+     * to consume more energy
+     *
+     * @return a list (fixed size 3) of Activity object instances, from which the user is asked to choose the
+     * one that he/she thinks is the most energy-consuming
+     */
+    public Activity[] getActivities() {
+<span class="nc" id="L39">        return this.activities;</span>
+    }
+
+    /**
+     * Setter for the 3 activities provided to the user as options
+     *
+     * @param activities a list (fixed size 3) of Activity object instances, from which the user is asked to choose the
+     *                   one that he/she thinks is the most energy-consuming
+     */
+    public void setActivities(Activity[] activities) {
+<span class="nc" id="L49">        this.activities = activities;</span>
+<span class="nc" id="L50">    }</span>
+
+    /**
+     * Additional method that returns the highest consumption from the 3 activities.
+     * In other words, the consumption associated to the activity that consumes the most energy.
+     *
+     * @return the maximum consumption of an activity
+     */
+    public long getAnswer() {
+<span class="nc" id="L59">        long max = 0;</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        if (activities[0].getConsumption_in_wh() &gt; max) max = activities[0].getConsumption_in_wh();</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">        if (activities[1].getConsumption_in_wh() &gt; max) max = activities[1].getConsumption_in_wh();</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">        if (activities[2].getConsumption_in_wh() &gt; max) max = activities[2].getConsumption_in_wh();</span>
+<span class="nc" id="L63">        return max;</span>
+    }
+
+    /**
+     * Additional methods that returns what number is assigned to the highest consumption activity from the 3 selected
+     * 1 for the 1st option, 2 for the 2nd option and 3 for the 3rd option.
+     * NOTE: 'activities' array was indexed starting from 0, (i+1) MUST have been returned instead.
+     *
+     * @return Index of the option that relates to the highest consumption activity
+     */
+    @Override
+    public long getCorrectAnswer() {
+<span class="nc" id="L75">        Activity maxActivity = Arrays.stream(activities).max(Comparator.comparingLong(Activity::getConsumption_in_wh)).get();</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">        for (int i = 0; i &lt; 3; i++) {</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">            if (activities[i].equals(maxActivity)) return i + 1;</span>
+        }
+<span class="nc" id="L79">        return 0;</span>
+    }
+
+    @Override
+    public boolean equals(Object o) {
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if (this == o) return true;</span>
+
+<span class="nc bnc" id="L86" title="All 4 branches missed.">        if (o == null || getClass() != o.getClass()) return false;</span>
+
+<span class="nc" id="L88">        QuestionMoreExpensive q = (QuestionMoreExpensive) o;</span>
+
+<span class="nc" id="L90">        return new EqualsBuilder()</span>
+<span class="nc" id="L91">                .append(getTitle(), q.getTitle())</span>
+<span class="nc" id="L92">                .append(activities, q.activities)</span>
+<span class="nc" id="L93">                .isEquals();</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L98">        return new HashCodeBuilder(17, 37)</span>
+<span class="nc" id="L99">                .append(getTitle())</span>
+<span class="nc" id="L100">                .append(activities)</span>
+<span class="nc" id="L101">                .toHashCode();</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L106">        return new ToStringBuilder(this)</span>
+<span class="nc" id="L107">                .append(&quot;title&quot;, getTitle())</span>
+<span class="nc" id="L108">                .append(&quot;activities&quot;, activities)</span>
+<span class="nc" id="L109">                .toString();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

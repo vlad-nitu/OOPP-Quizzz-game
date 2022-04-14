@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LeaderboardController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">server</a> &gt; <a href="index.source.html" class="el_package">server.api</a> &gt; <span class="el_source">LeaderboardController.java</span></div><h1>LeaderboardController.java</h1><pre class="source lang-java linenums">package server.api;
+
+
+import commons.player.SimpleUser;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import server.database.LeaderboardRepository;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/leaderboard&quot;)
+public class LeaderboardController {
+
+     private final LeaderboardRepository leaderboardRepository;
+
+
+<span class="nc" id="L18">    public LeaderboardController(LeaderboardRepository leaderboardRepository) {</span>
+<span class="nc" id="L19">        this.leaderboardRepository = leaderboardRepository;</span>
+<span class="nc" id="L20">    }</span>
+
+
+    /**
+     * Gets all entries in the leaderboard repository
+     * @return a list of Simple Users that are all the entries in the global leaderboard
+     */
+    @GetMapping(path = {&quot;&quot;, &quot;/&quot;})
+    public List&lt;SimpleUser&gt; getAll() {
+<span class="nc" id="L29">        return leaderboardRepository.findAll();</span>
+    }
+
+
+    /**
+     * Adds a player to the global leaderboard repository
+     * @param player the player to be added to the leaderboard repository
+     * @return the player that was added to the leaderboard repository
+     */
+    @PostMapping(path = {&quot;/addPlayer&quot;})
+    public ResponseEntity&lt;SimpleUser&gt; addPlayer(@RequestBody SimpleUser player) {
+<span class="nc bnc" id="L40" title="All 2 branches missed.">        if (isNullOrEmpty(player.getName())) {</span>
+<span class="nc" id="L41">            return ResponseEntity.badRequest().build();</span>
+        }
+<span class="nc" id="L43">        SimpleUser savedPlayer = leaderboardRepository.save(player);</span>
+<span class="nc" id="L44">        return ResponseEntity.ok(savedPlayer);</span>
+    }
+
+
+    /**
+     * Determines if a certain player name doesn't exist
+     * @param s the name of the player
+     * @return true, if the string is null or empty, false otherwise
+     */
+    private static boolean isNullOrEmpty(String s) {
+<span class="nc bnc" id="L54" title="All 4 branches missed.">        return s == null || s.isEmpty();</span>
+    }
+
+
+    /**
+     * Deletes all entries in the leaderboard repository
+     */
+    @DeleteMapping(&quot;/all&quot;)
+    public ResponseEntity&lt;SimpleUser&gt; deleteAll() {
+        try {
+<span class="nc" id="L64">            leaderboardRepository.deleteAll();</span>
+<span class="nc" id="L65">        } catch (Exception e) {</span>
+<span class="nc" id="L66">            return ResponseEntity.internalServerError().build();</span>
+<span class="nc" id="L67">        }</span>
+<span class="nc" id="L68">        return ResponseEntity.ok().build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

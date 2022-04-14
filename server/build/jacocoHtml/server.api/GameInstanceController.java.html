@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GameInstanceController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">server</a> &gt; <a href="index.source.html" class="el_package">server.api</a> &gt; <span class="el_source">GameInstanceController.java</span></div><h1>GameInstanceController.java</h1><pre class="source lang-java linenums">package server.api;
+
+import commons.*;
+import commons.player.Player;
+import commons.player.SimpleUser;
+import commons.powerups.AnswerPU;
+import commons.powerups.PointsPU;
+import commons.powerups.TimePU;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;api/gameinstance&quot;)
+public class GameInstanceController {
+
+
+<span class="nc" id="L24">    private final Logger logger = LoggerFactory.getLogger(GameInstanceController.class);</span>
+    private final List&lt;GameInstanceServer&gt; gameInstances;
+    private final GameController gameController;
+
+<span class="nc" id="L28">    public GameInstanceController(GameController gameController) {</span>
+<span class="nc" id="L29">        this.gameController = gameController;</span>
+<span class="nc" id="L30">        gameInstances = gameController.getGameInstances();</span>
+<span class="nc" id="L31">    }</span>
+
+
+    /**
+     * Gets a question from gameInstance
+     *
+     * @param gameInstanceId The gameInstance you want a question from
+     * @param questionNumber Number of question you request
+     * @param cookie         Cookie of player
+     * @return Requested question
+     */
+    @GetMapping(&quot;/{gameInstanceId}/q{questionNumber}&quot;)
+    public ResponseEntity&lt;Question&gt; getQuestion(@PathVariable int gameInstanceId, @PathVariable int questionNumber,
+                                                @CookieValue(name = &quot;user-id&quot;, defaultValue = &quot;null&quot;) String cookie) {
+<span class="nc bnc" id="L45" title="All 8 branches missed.">        if (gameInstanceId &lt; 0 || gameInstanceId &gt; gameInstances.size() - 1</span>
+<span class="nc" id="L46">                || questionNumber &gt; 19 || questionNumber &lt; 0) return ResponseEntity.badRequest().build();</span>
+
+<span class="nc" id="L48">        Player currentPlayer = getPlayerFromGameInstance(gameInstanceId, cookie);</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">        if (currentPlayer == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L50">        GameInstance currGI = gameInstances.get(gameInstanceId);</span>
+<span class="nc" id="L51">        logger.info(&quot;[GI &quot; + (currGI.getId()) + &quot;] PLAYER (&quot; + currentPlayer.getId() + &quot;) REQUESTED QUESTION N. &quot; + questionNumber);</span>
+<span class="nc" id="L52">        Question question = currGI.getQuestions().get(questionNumber);</span>
+<span class="nc" id="L53">        return ResponseEntity.ok(question);</span>
+    }
+
+
+    /**
+     * Returns all players from a gameInstance (if you are also connected to that gameInstance)
+     *
+     * @param gameInstanceId ID of GameInstance
+     * @param cookie         Cookie of player
+     * @return List of all players connected to gameInstance
+     */
+    @GetMapping(&quot;/{gameInstanceId}/players&quot;)
+    public ResponseEntity&lt;List&lt;SimpleUser&gt;&gt; getPlayers(@PathVariable int gameInstanceId,
+                                                       @CookieValue(name = &quot;user-id&quot;, defaultValue = &quot;null&quot;) String cookie) {
+<span class="nc bnc" id="L67" title="All 2 branches missed.">        if (getPlayerFromGameInstance(gameInstanceId, cookie) == null) return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L68">        return ResponseEntity.ok(gameInstances.get(gameInstanceId).getPlayers()</span>
+<span class="nc" id="L69">                .stream().map(SimpleUser::unsafe).collect(Collectors.toList()));</span>
+    }
+
+
+    /**
+     * Disconnects a certain player from the gameInstance he/she is in
+     * @param gameInstanceId the id of the gameInstance the player has to be disconnected from
+     * @param cookie the cookie of the player that has to be disconnected
+     * @return true if the player was successfully disconnected, false otherwise
+     */
+    @DeleteMapping(&quot;/{gameInstanceId}/disconnect&quot;)
+    public ResponseEntity&lt;Boolean&gt; disconnect(@PathVariable int gameInstanceId,
+                                              @CookieValue(name = &quot;user-id&quot;, defaultValue = &quot;null&quot;) String cookie) {
+<span class="nc" id="L82">        Player removePlayer = getPlayerFromGameInstance(gameInstanceId, cookie);</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        if (removePlayer == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L84">        logger.info(&quot;[GI &quot; + (gameInstanceId) + &quot;] PLAYER (&quot; + removePlayer.getId() + &quot;) DISCONNECTED&quot;);</span>
+<span class="nc" id="L85">        return ResponseEntity.ok(gameInstances.get(gameInstanceId).disconnectPlayer(removePlayer));</span>
+    }
+
+
+    /**
+     * Gets the type of the current question in the specified gameInstance
+     * @param gameInstanceId the id of the gameInstance to get the question from
+     * @return the name of the type of question
+     */
+    @GetMapping(&quot;/{gameInstanceId}/getCurrentQType&quot;)
+    public ResponseEntity&lt;String&gt; getCurrentQType(@PathVariable int gameInstanceId) {
+<span class="nc bnc" id="L96" title="All 4 branches missed.">        if (gameInstanceId &lt; 0 || gameInstanceId &gt;= gameInstances.size()) return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L97">        return ResponseEntity.ok(gameInstances.get(gameInstanceId).getCurrentQuestion().getClass().getName());</span>
+    }
+
+
+    /**
+     * Gets the current question from the specified gameInstance
+     * @param gameInstanceId the id of the gameInstance to get the question from
+     * @param cookie the cookie of a player in that gameInstance
+     * @return the current question
+     */
+    @GetMapping(&quot;/{gameInstanceId}/question&quot;)
+    public ResponseEntity&lt;Question&gt; getQuestion(@PathVariable int gameInstanceId,
+                                                @CookieValue(name = &quot;user-id&quot;, defaultValue = &quot;null&quot;) String cookie) {
+<span class="nc" id="L110">        Player player = getPlayerFromGameInstance(gameInstanceId, cookie);</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">        if (player == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L112">        GameInstanceServer gameInstance = gameInstances.get(player.getGameInstanceId());</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">        if (gameInstance.getState() != GameState.INQUESTION) return ResponseEntity.notFound().build();</span>
+<span class="nc" id="L114">        return ResponseEntity.ok(gameInstance.getCurrentQuestion());</span>
+    }
+
+
+    /**
+     * Gets the time left for the question that a certain player is shown
+     * @param  gameInstanceId the id of the gameInstance that the question is in
+     * @param cookie a cookie of a player from the gameInstance for which we want to get the time left
+     * @return the time left
+     */
+    @GetMapping(&quot;/{gameInstanceId}/timeleft&quot;)
+    public ResponseEntity&lt;Integer&gt; getTimeLeft(@PathVariable int gameInstanceId,
+                                               @CookieValue(name = &quot;user-id&quot;, defaultValue = &quot;null&quot;) String cookie) {
+<span class="nc" id="L127">        Player player = getPlayerFromGameInstance(gameInstanceId, cookie);</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">        if (player == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L129">        GameInstanceServer gameInstance = gameInstances.get(player.getGameInstanceId());</span>
+<span class="nc bnc" id="L130" title="All 4 branches missed.">        if (gameInstance.getState() != GameState.INQUESTION &amp;&amp; gameInstance.getState() != GameState.POSTQUESTION)</span>
+<span class="nc" id="L131">            return ResponseEntity.notFound().build();</span>
+<span class="nc" id="L132">        return ResponseEntity.ok(gameInstance.getTimeLeft());</span>
+    }
+
+
+    /**
+     * Sends the answer of the player to the server
+     * @param gameInstanceId the id of the gameInstance the player is in
+     * @param cookie the cookie of the player that answered
+     * @param answer the answer of the player
+     * @return true if the answer was sent successfully, false otherwise
+     */
+    @PostMapping(&quot;/{gameInstanceId}/answer&quot;)
+    public ResponseEntity&lt;Boolean&gt; answerQuestion(@PathVariable int gameInstanceId, @RequestBody Answer answer,
+                                                  @CookieValue(name = &quot;user-id&quot;, defaultValue = &quot;null&quot;) String cookie) {
+<span class="nc" id="L146">        Player player = getPlayerFromGameInstance(gameInstanceId, cookie);</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">        if (player == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L148">        GameInstanceServer gameInstance = gameInstances.get(player.getGameInstanceId());</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">        if (gameInstance.getState() != GameState.INQUESTION) return ResponseEntity.ok(false);</span>
+<span class="nc" id="L150">        return ResponseEntity.ok(gameInstance.answerQuestion(player, answer));</span>
+    }
+
+
+    /**
+     * Gets the correct answer for a certain question
+     * @param gameInstanceId the id of the gameInstance the question is in
+     * @param cookie the cookie of a player in that gameInstance
+     * @return the correct answer
+     */
+    @GetMapping(&quot;/{gameInstanceId}/correctanswer&quot;)
+    public ResponseEntity&lt;Long&gt; getCorrectAnswer(@PathVariable int gameInstanceId,
+                                                 @CookieValue(name = &quot;user-id&quot;, defaultValue = &quot;null&quot;) String cookie) {
+<span class="nc" id="L163">        Player player = getPlayerFromGameInstance(gameInstanceId, cookie);</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">        if (player == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L165">        GameInstanceServer gameInstance = gameInstances.get(player.getGameInstanceId());</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">        if (gameInstance.getState() != GameState.POSTQUESTION) return ResponseEntity.notFound().build();</span>
+<span class="nc" id="L167">        return ResponseEntity.ok(gameInstance.getCorrectAnswer());</span>
+    }
+
+    /**
+     * Starts the game, by changing the status of the gameInstance the specified player is in
+     * @param gameInstanceId the id of the gameInstance the player is in
+     * @param cookie the cookie of the player that pressed the play button
+     * @return true if the game successfully started, false otherwise
+     */
+    @GetMapping(&quot;/{gameInstanceId}/start&quot;)
+    public ResponseEntity&lt;Boolean&gt; startGame(@PathVariable int gameInstanceId,
+                                             @CookieValue(name = &quot;user-id&quot;, defaultValue = &quot;null&quot;) String cookie) {
+<span class="nc bnc" id="L179" title="All 2 branches missed.">        if (gameInstances.get(gameInstanceId).getState().equals(GameState.STARTING)) return ResponseEntity.ok(true);</span>
+<span class="nc" id="L180">        Player reqPlayer = getPlayerFromGameInstance(gameInstanceId, cookie);</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">        if (reqPlayer == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L182">        logger.info(&quot;[GI &quot; + (gameInstanceId) + &quot;] Game is starting in 5 seconds...&quot;);</span>
+<span class="nc" id="L183">        gameInstances.get(gameInstanceId).startCountdown();</span>
+
+<span class="nc" id="L185">        return ResponseEntity.ok(true);</span>
+    }
+
+
+    /**
+     * Makes a call to send an emoji to all the players
+     * @param gameInstanceId the id of the gameInstance the emoji is being sent in
+     * @param cookie the cookie of the player that sent the emoji
+     * @param emoji the emoji that was sent
+     * @return true if the game is in the right state, and the call was made successfully
+     */
+    @PostMapping(&quot;/{gameInstanceId}/emoji&quot;)
+    public ResponseEntity&lt;Boolean&gt; sendEmoji(@PathVariable int gameInstanceId,
+                                             @CookieValue(name = &quot;user-id&quot;, defaultValue = &quot;null&quot;) String cookie,
+                                             @RequestBody Emoji emoji) {
+<span class="nc bnc" id="L200" title="All 2 branches missed.">        if (gameInstances.get(gameInstanceId).getState().equals(GameState.STARTING)) return ResponseEntity.ok(true);</span>
+<span class="nc" id="L201">        Player reqPlayer = getPlayerFromGameInstance(gameInstanceId, cookie);</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">        if (reqPlayer == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L203">        gameInstances.get(gameInstanceId).sendEmoji(emoji);</span>
+<span class="nc" id="L204">        logger.info(&quot;Emoji received: &quot; + emoji.getType() + &quot; &quot; + emoji.getPlayer().getName());</span>
+<span class="nc" id="L205">        return ResponseEntity.ok(true);</span>
+    }
+
+    @GetMapping(&quot;/{gameInstanceId}/getServerName&quot;)
+    public ResponseEntity&lt;String&gt; getServerName(@PathVariable int gameInstanceId) {
+<span class="nc bnc" id="L210" title="All 4 branches missed.">        if (gameInstanceId &lt; 0 || gameInstanceId &gt;= gameInstances.size()) return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L211">        return ResponseEntity.ok(gameInstances.get(gameInstanceId).getServerName());</span>
+    }
+
+    /**
+     * Check if the game is in the right state and make a call to reduce time for players
+     *
+     * @param gameInstanceId
+     * @param cookie
+     * @param timePU
+     * @return true if the game is in the right state, and the call was made successfully
+     */
+    @PostMapping(&quot;/{gameInstanceId}/decrease-time&quot;)
+    public ResponseEntity&lt;Boolean&gt; decreaseTime(@PathVariable int gameInstanceId,
+                                                @CookieValue(name = &quot;user-id&quot;, defaultValue = &quot;null&quot;) String cookie,
+                                                @RequestBody TimePU timePU) {
+<span class="nc bnc" id="L226" title="All 2 branches missed.">        if (!gameInstances.get(gameInstanceId).getState().equals(GameState.INQUESTION))</span>
+<span class="nc" id="L227">            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L228">        Player reqPlayer = getPlayerFromGameInstance(gameInstanceId, cookie);</span>
+<span class="nc bnc" id="L229" title="All 2 branches missed.">        if (reqPlayer == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L230">        gameInstances.get(gameInstanceId).decreaseTime(timePU);</span>
+<span class="nc" id="L231">        logger.info(&quot;Time decreased by &quot; + timePU.getPercentage() + &quot;%&quot;);</span>
+<span class="nc" id="L232">        return ResponseEntity.ok(true);</span>
+    }
+
+    /**
+     * Check if the game is in the right state and make a call to notify other players that a player used this powerup
+     *
+     * @param gameInstanceId
+     * @param cookie
+     * @param answerPU
+     * @return true if the game is in the right state, and the call was made successfully
+     */
+    @PostMapping(&quot;/{gameInstanceId}/remove-incorrect-answer&quot;)
+    public ResponseEntity&lt;Boolean&gt; removeAnswer(@PathVariable int gameInstanceId,
+                                                @CookieValue(name = &quot;user-id&quot;, defaultValue = &quot;null&quot;) String cookie,
+                                                @RequestBody AnswerPU answerPU) {
+<span class="nc bnc" id="L247" title="All 2 branches missed.">        if (!gameInstances.get(gameInstanceId).getState().equals(GameState.INQUESTION))</span>
+<span class="nc" id="L248">            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L249">        Player reqPlayer = getPlayerFromGameInstance(gameInstanceId, cookie);</span>
+<span class="nc bnc" id="L250" title="All 2 branches missed.">        if (reqPlayer == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L251">        gameInstances.get(gameInstanceId).removeAnswer(answerPU);</span>
+<span class="nc" id="L252">        logger.info(reqPlayer.getName() + &quot; removed an incorrect answer&quot;);</span>
+<span class="nc" id="L253">        return ResponseEntity.ok(true);</span>
+    }
+
+    /**
+     * Check if the game is in the right state and make a call to notify other players that a player used this powerup
+     *
+     * @param gameInstanceId
+     * @param cookie
+     * @param pointsPU
+     * @return true if the game is in the right state, and the call was made successfully
+     */
+    @PostMapping(&quot;/{gameInstanceId}/double-points&quot;)
+    public ResponseEntity&lt;Boolean&gt; doublePoints(@PathVariable int gameInstanceId,
+                                                @CookieValue(name = &quot;user-id&quot;, defaultValue = &quot;null&quot;) String cookie,
+                                                @RequestBody PointsPU pointsPU) {
+<span class="nc bnc" id="L268" title="All 2 branches missed.">        if (!gameInstances.get(gameInstanceId).getState().equals(GameState.INQUESTION))</span>
+<span class="nc" id="L269">            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L270">        Player reqPlayer = getPlayerFromGameInstance(gameInstanceId, cookie);</span>
+<span class="nc bnc" id="L271" title="All 2 branches missed.">        if (reqPlayer == null) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();</span>
+<span class="nc" id="L272">        gameInstances.get(gameInstanceId).doublePoints(pointsPU);</span>
+<span class="nc" id="L273">        logger.info(reqPlayer.getName() + &quot; doubled their points.&quot;);</span>
+<span class="nc" id="L274">        return ResponseEntity.ok(true);</span>
+    }
+
+
+    /**
+     * Gets the type of a certain gameInstance
+     * @param gameInstanceId the id of the gameInstance to get the type for
+     * @return 0 if the game is single player, 1 if it's multiplayer
+     */
+    @GetMapping(&quot;/{gameInstanceId}/gameInstanceType&quot;)
+    public ResponseEntity&lt;Integer&gt; gameInstanceType(@PathVariable int gameInstanceId) {
+<span class="nc bnc" id="L285" title="All 4 branches missed.">        if (gameInstanceId &lt; 0 || gameInstanceId &gt;= gameInstances.size()) return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L286">        return ResponseEntity.ok(gameInstances.get(gameInstanceId).getType());</span>
+    }
+
+    /**
+     * Additional method that checks whether cookie given is from a player connected to gameInstance with ID
+     *
+     * @param gameInstanceId ID of GameInstance
+     * @param cookie         Cookie of player
+     * @return An instance of class 'Player' if exists, otherwise null
+     */
+    private Player getPlayerFromGameInstance(int gameInstanceId, String cookie) {
+<span class="nc" id="L297">        GameInstance currGI = gameInstances.get(gameInstanceId);</span>
+<span class="nc" id="L298">        Optional&lt;Player&gt; optPlayer = currGI.getPlayers().stream().filter(p -&gt; p.getCookie().equals(cookie)).findFirst();</span>
+<span class="nc bnc" id="L299" title="All 2 branches missed.">        if (optPlayer.isEmpty()) return null;</span>
+<span class="nc" id="L300">        else return optPlayer.get();</span>
+    }
+
+    /**
+     * Getter for the list of gameInstances associated with the controller instance
+     * @return a list of GameInstanceServer object
+     */
+    public List&lt;GameInstanceServer&gt; getGameInstances() {
+<span class="nc" id="L308">        return gameInstances;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

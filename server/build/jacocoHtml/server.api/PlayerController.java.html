@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PlayerController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">server</a> &gt; <a href="index.source.html" class="el_package">server.api</a> &gt; <span class="el_source">PlayerController.java</span></div><h1>PlayerController.java</h1><pre class="source lang-java linenums">package server.api;
+
+import commons.Player;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import server.database.PlayerRepository;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+
+@RestController
+@RequestMapping(&quot;/api/players&quot;)
+public class PlayerController {
+
+    private final Random random;
+
+    private final PlayerRepository playerRepository;
+
+<span class="nc" id="L21">    public PlayerController(Random random, PlayerRepository playerRepository) {</span>
+<span class="nc" id="L22">        this.random = random;</span>
+<span class="nc" id="L23">        this.playerRepository = playerRepository;</span>
+<span class="nc" id="L24">    }</span>
+
+    @GetMapping(path = {&quot;&quot;, &quot;/&quot;})
+    public List&lt;Player&gt; getAll() {
+<span class="nc" id="L28">        return playerRepository.findAll();</span>
+    }
+
+    @PostMapping(path = {&quot;&quot;, &quot;/&quot;})
+    public ResponseEntity&lt;Player&gt; addPlayer(@RequestBody Player player) {
+<span class="nc bnc" id="L33" title="All 2 branches missed.">        if (isNullOrEmpty(player.getName())) {</span>
+<span class="nc" id="L34">            return ResponseEntity.badRequest().build();</span>
+        }
+        //playerRepository.save(player);
+<span class="nc" id="L37">        Player savedPlayer = playerRepository.save(new Player(player.getName()));</span>
+<span class="nc" id="L38">        return ResponseEntity.ok(savedPlayer);</span>
+    }
+
+    private static boolean isNullOrEmpty(String s) {
+<span class="nc bnc" id="L42" title="All 4 branches missed.">        return s == null || s.isEmpty();</span>
+    }
+
+
+    @PutMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Player&gt; updatePlayer(@PathVariable(&quot;id&quot;) long id, @RequestBody Player player) {
+<span class="nc" id="L48">        Optional&lt;Player&gt; playerData = playerRepository.findById(id);</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">        if (playerData.isPresent()) {</span>
+<span class="nc" id="L50">            Player newPlayer = playerData.get();</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">            if (!isNullOrEmpty(player.getName())) newPlayer.setName(player.getName());</span>
+<span class="nc" id="L52">            newPlayer.setScore(0);</span>
+<span class="nc" id="L53">            newPlayer.setStatus(0);</span>
+<span class="nc" id="L54">            newPlayer.setPowerUps(new ArrayList&lt;&gt;());</span>
+<span class="nc" id="L55">            newPlayer.setId(id);</span>
+<span class="nc" id="L56">            return ResponseEntity.ok(playerRepository.save(newPlayer));</span>
+        }
+<span class="nc" id="L58">        return ResponseEntity.notFound().build();</span>
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Player&gt; deletePlayer(@PathVariable(&quot;id&quot;) long id) {
+<span class="nc bnc" id="L63" title="All 2 branches missed.">        if (playerRepository.existsById(id)) {</span>
+            try {
+<span class="nc" id="L65">                playerRepository.deleteById(id);</span>
+<span class="nc" id="L66">                return ResponseEntity.ok().build();</span>
+<span class="nc" id="L67">            } catch (Exception e) {</span>
+<span class="nc" id="L68">                return ResponseEntity.internalServerError().build();</span>
+            }
+        }
+<span class="nc" id="L71">        return ResponseEntity.notFound().build();</span>
+    }
+
+
+    @DeleteMapping(&quot;/all&quot;)
+    public ResponseEntity&lt;Player&gt; deleteAll() {
+        try {
+<span class="nc" id="L78">            playerRepository.deleteAll();</span>
+<span class="nc" id="L79">        } catch (Exception e) {</span>
+<span class="nc" id="L80">            return ResponseEntity.internalServerError().build();</span>
+<span class="nc" id="L81">        }</span>
+<span class="nc" id="L82">        return ResponseEntity.ok().build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

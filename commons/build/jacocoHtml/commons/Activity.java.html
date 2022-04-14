@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Activity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">commons</a> &gt; <a href="index.source.html" class="el_package">commons</a> &gt; <span class="el_source">Activity.java</span></div><h1>Activity.java</h1><pre class="source lang-java linenums">package commons;
+
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+
+import javax.persistence.*;
+
+@Entity
+public class Activity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long activityID;
+
+    private String id; //id provided by activity-bank (i.e. &quot;00-shower&quot;)
+
+    private String image_path;
+
+    private String title;
+
+    private Long consumption_in_wh; //some values in the JSON file are outside the Integer length, so we have to use long
+
+    private String source;
+
+    @SuppressWarnings(&quot;unused&quot;)
+<span class="nc" id="L27">    public Activity() {</span>
+
+<span class="nc" id="L29">    }</span>
+
+<span class="nc" id="L31">    public Activity(String id, String image_path, String title, Long consumption_in_wh, String source) {</span>
+<span class="nc" id="L32">        this.id = id;</span>
+<span class="nc" id="L33">        this.image_path = image_path;</span>
+<span class="nc bnc" id="L34" title="All 2 branches missed.">        if (image_path == null) image_path = &quot;&quot;;</span>
+<span class="nc" id="L35">        this.title = title;</span>
+<span class="nc" id="L36">        this.consumption_in_wh = consumption_in_wh;</span>
+<span class="nc" id="L37">        this.source = source;</span>
+<span class="nc" id="L38">    }</span>
+
+    public void setId(String id) {
+<span class="nc" id="L41">        this.id = id;</span>
+<span class="nc" id="L42">    }</span>
+
+    @Column(name = &quot;id&quot;)
+    public String getId() {
+<span class="nc" id="L46">        return this.id;</span>
+    }
+
+    @Column(name = &quot;image_path&quot;)
+    public String getImage_path() {
+<span class="nc" id="L51">        return image_path;</span>
+    }
+
+    public void setImage_path(String image_path) {
+<span class="nc" id="L55">        this.image_path = image_path;</span>
+<span class="nc" id="L56">    }</span>
+
+    @Column(name = &quot;title&quot;)
+    public String getTitle() {
+<span class="nc" id="L60">        return title;</span>
+    }
+
+    public void setTitle(String title) {
+<span class="nc" id="L64">        this.title = title;</span>
+<span class="nc" id="L65">    }</span>
+
+    @Column(name = &quot;consumption_in_wh&quot;)
+    public Long getConsumption_in_wh() {
+<span class="nc" id="L69">        return consumption_in_wh;</span>
+    }
+
+    public void setConsumption_in_wh(Long consumption_in_wh) {
+<span class="nc" id="L73">        this.consumption_in_wh = consumption_in_wh;</span>
+<span class="nc" id="L74">    }</span>
+
+    @Column(name = &quot;source&quot;)
+    public String getSource() {
+<span class="nc" id="L78">        return source;</span>
+    }
+
+    public void setSource(String source) {
+<span class="nc" id="L82">        this.source = source;</span>
+<span class="nc" id="L83">    }</span>
+
+    @Column(name = &quot;activityID&quot;)
+    public Long getActivityID() {
+<span class="nc" id="L87">        return this.activityID;</span>
+    }
+
+    public void setActivityID(Long activityID) {
+<span class="nc" id="L91">        this.activityID = activityID;</span>
+<span class="nc" id="L92">    }</span>
+
+    @Override
+    public boolean equals(Object o) {
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        if (this == o) return true;</span>
+
+<span class="nc bnc" id="L98" title="All 4 branches missed.">        if (o == null || getClass() != o.getClass()) return false;</span>
+
+<span class="nc" id="L100">        Activity activity = (Activity) o;</span>
+
+<span class="nc" id="L102">        return new EqualsBuilder()</span>
+<span class="nc" id="L103">                .append(activityID, activity.activityID)</span>
+<span class="nc" id="L104">                .append(consumption_in_wh, activity.consumption_in_wh)</span>
+<span class="nc" id="L105">                .append(id, activity.id)</span>
+<span class="nc" id="L106">                .append(image_path, activity.image_path)</span>
+<span class="nc" id="L107">                .append(title, activity.title)</span>
+<span class="nc" id="L108">                .append(source, activity.source)</span>
+<span class="nc" id="L109">                .isEquals();</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L114">        return new HashCodeBuilder(17, 37)</span>
+<span class="nc" id="L115">                .append(activityID)</span>
+<span class="nc" id="L116">                .append(id)</span>
+<span class="nc" id="L117">                .append(image_path)</span>
+<span class="nc" id="L118">                .append(title)</span>
+<span class="nc" id="L119">                .append(consumption_in_wh)</span>
+<span class="nc" id="L120">                .append(source)</span>
+<span class="nc" id="L121">                .toHashCode();</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L126">        return new ToStringBuilder(this)</span>
+<span class="nc" id="L127">                .append(&quot;activityID&quot;, activityID)</span>
+<span class="nc" id="L128">                .append(&quot;id&quot;, id)</span>
+<span class="nc" id="L129">                .append(&quot;image_path&quot;, image_path)</span>
+<span class="nc" id="L130">                .append(&quot;title&quot;, title)</span>
+<span class="nc" id="L131">                .append(&quot;consumption_in_wh&quot;, consumption_in_wh)</span>
+<span class="nc" id="L132">                .append(&quot;source&quot;, source)</span>
+<span class="nc" id="L133">                .toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

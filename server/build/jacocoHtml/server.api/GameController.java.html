@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GameController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">server</a> &gt; <a href="index.source.html" class="el_package">server.api</a> &gt; <span class="el_source">GameController.java</span></div><h1>GameController.java</h1><pre class="source lang-java linenums">package server.api;
+
+
+import commons.GameInstance;
+import commons.GameState;
+import commons.player.Player;
+import commons.player.SimpleUser;
+import communication.RequestToJoin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.util.DigestUtils;
+import org.springframework.web.bind.annotation.*;
+import server.database.ActivityLoader;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.stream.Collectors;
+
+
+@RestController
+@RequestMapping(&quot;api/game&quot;)
+public class GameController {
+
+<span class="nc" id="L32">    private final Logger logger = LoggerFactory.getLogger(GameController.class);</span>
+
+    private final SimpMessagingTemplate msgs;
+    public ActivityController activityController;
+    private final List&lt;GameInstanceServer&gt; gameInstances;
+    private final List&lt;SimpleUser&gt; players;
+    private Map&lt;String, Integer&gt; serverNames;
+<span class="fc" id="L39">    private static int currentMPGIId = 0; //Current ID of gameInstance for multiplayer</span>
+<span class="fc" id="L40">    private static int currentSPGIId = 0; //Current ID of gameInstance for singleplayer</span>
+
+
+    /**
+     * Creates the GameController and initializes the first gameInstance
+     *
+     */
+<span class="nc" id="L47">    public GameController(SimpMessagingTemplate msgs, ActivityController activityController) {</span>
+<span class="nc" id="L48">        this.msgs = msgs;</span>
+<span class="nc" id="L49">        this.activityController = activityController;</span>
+<span class="nc" id="L50">        this.gameInstances = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L51">        this.players = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L52">        this.serverNames = new HashMap&lt;&gt;();</span>
+
+<span class="nc" id="L54">        addServer(&quot;default&quot;);</span>
+<span class="nc" id="L55">        addServer(&quot;first&quot;);</span>
+<span class="nc" id="L56">        addServer(&quot;second&quot;);</span>
+
+<span class="nc" id="L58">        currentMPGIId = 0;</span>
+<span class="nc" id="L59">    }</span>
+
+    /**
+     * Lets a client join a gameInstance as a player
+     *
+     * @param request Request of player (includes name of player and gameType(Singleplayer or Multiplayer))
+     * @return Simple User (Including name, cookie and gameInstanceID)
+     */
+    @PostMapping(&quot;/join&quot;)
+    public ResponseEntity&lt;SimpleUser&gt; addPlayer(@RequestBody RequestToJoin request) {
+<span class="nc bnc" id="L69" title="All 2 branches missed.">        if (request == null) return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L70">        ResponseCookie tokenCookie = ResponseCookie.from(&quot;user-id&quot;, DigestUtils.md5DigestAsHex(</span>
+<span class="nc" id="L71">                (request.getName() + System.currentTimeMillis()).getBytes(StandardCharsets.UTF_8))).build();</span>
+
+        SimpleUser savedPlayer;
+<span class="nc bnc" id="L74" title="All 3 branches missed.">        switch (request.getGameType()) {</span>
+            case GameInstance.SINGLE_PLAYER:
+<span class="nc" id="L76">                GameInstanceServer gameInstance = new GameInstanceServer(gameInstances.size(), GameInstance.SINGLE_PLAYER, this, msgs, null);</span>
+<span class="nc" id="L77">                gameInstances.add(gameInstance);</span>
+<span class="nc" id="L78">                currentSPGIId = gameInstance.getId();</span>
+<span class="nc" id="L79">                savedPlayer = new SimpleUser(players.size(), request.getName(),</span>
+<span class="nc" id="L80">                        gameInstance.getId(), tokenCookie.getValue());</span>
+<span class="nc" id="L81">                players.add(savedPlayer);</span>
+<span class="nc" id="L82">                gameInstance.getPlayers().add(savedPlayer.toPlayer(gameInstance));</span>
+<span class="nc" id="L83">                logger.info(&quot;[GI &quot; + (gameInstance.getId()) + &quot;] PLAYER (&quot; + savedPlayer.getId() +</span>
+<span class="nc" id="L84">                        &quot;) STARTED SP GAME: NAME=&quot; + savedPlayer.getName());</span>
+<span class="nc" id="L85">                break;</span>
+
+            case GameInstance.MULTI_PLAYER:
+                GameInstanceServer currGameInstance;
+<span class="nc bnc" id="L89" title="All 2 branches missed.">                if (serverNames.containsKey(request.getServerName())) {</span>
+<span class="nc" id="L90">                    currGameInstance = gameInstances.get(serverNames.get(request.getServerName()));</span>
+                } else {
+<span class="nc" id="L92">                    throw new IllegalArgumentException(&quot;Server not found!&quot;);</span>
+                }
+<span class="nc bnc" id="L94" title="All 2 branches missed.">                if (currGameInstance.getState() != GameState.INLOBBY)</span>
+<span class="nc" id="L95">                    throw new IllegalArgumentException(&quot;Wait for the game to end!&quot;);</span>
+<span class="nc" id="L96">                savedPlayer = new SimpleUser(players.size(), request.getName(),</span>
+<span class="nc" id="L97">                        currGameInstance.getId(), tokenCookie.getValue());</span>
+<span class="nc" id="L98">                players.add(savedPlayer);</span>
+<span class="nc" id="L99">                currGameInstance.getPlayers().add(savedPlayer.toPlayer(currGameInstance));</span>
+<span class="nc" id="L100">                logger.info(&quot;[GI &quot; + (currGameInstance.getId()) + &quot;] PLAYER (&quot; + savedPlayer.getId() +</span>
+<span class="nc" id="L101">                        &quot;) ENTERED MP LOBBY: NAME=&quot; + savedPlayer.getName());</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">                if (msgs != null)</span>
+<span class="nc" id="L103">                    currGameInstance.updatePlayerList();</span>
+                break;
+
+            default:
+<span class="nc" id="L107">                return ResponseEntity.badRequest().build();</span>
+        }
+<span class="nc" id="L109">        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, tokenCookie.toString()).body(savedPlayer);</span>
+    }
+
+    /**
+     * Method that returns an InputStream object instance that resides at the specific {activityFolder}/{activityFile}
+     *
+     * @param activityFolder folder with the activities
+     * @param activityFile   the wanted file
+     * @return InputStream with the file
+     */
+    @GetMapping(value = &quot;/activities/{activityFolder}/{activityFile}&quot;,
+            produces = &quot;image/jpg&quot;)
+    public ResponseEntity&lt;InputStreamResource&gt; getImage(@PathVariable String activityFolder, @PathVariable String activityFile) {
+        try {
+<span class="nc" id="L123">            InputStream inputStream = new FileInputStream(ActivityLoader.path + activityFolder + &quot;/&quot; + activityFile);</span>
+<span class="nc" id="L124">            return ResponseEntity.ok(new InputStreamResource(inputStream));</span>
+<span class="nc" id="L125">        } catch (FileNotFoundException e) {</span>
+<span class="nc" id="L126">            logger.debug(&quot;Image &quot; + activityFolder + &quot;/&quot; + activityFile + &quot; not found!&quot;);</span>
+<span class="nc" id="L127">            return ResponseEntity.notFound().build();</span>
+        }
+    }
+
+
+    /**
+     * Method that returns last instance of a multiplayer ID
+     *
+     * @return the ID of the last Multiplayer Game Instance
+     */
+    @GetMapping(&quot;/getLastGIIdMult&quot;)
+    public ResponseEntity&lt;Integer&gt; getLastGIIdMult() {
+<span class="nc bnc" id="L139" title="All 4 branches missed.">        if (currentMPGIId &lt; 0 || currentMPGIId &gt;= gameInstances.size()) return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L140">        return ResponseEntity.ok(currentMPGIId);</span>
+    }
+
+    /**
+     * Additional method that returns all the players that have participated in a given game instance
+     *
+     * @param gameInstanceId ID of GameInstance
+     * @return ResponseEntity object that returns 400 BAD SYNTAX if the gameInstanceId is not in the appropriate range, or
+     * 200 STATUS OK with a body consisting of the list of all players from a game uniquely identified
+     * by gameInstanceID
+     */
+    @GetMapping(&quot;/{gameInstanceId}/allPlayers&quot;)
+    public ResponseEntity&lt;List&lt;SimpleUser&gt;&gt; allPlayers(@PathVariable int gameInstanceId) {
+<span class="nc bnc" id="L153" title="All 4 branches missed.">        if (gameInstanceId &lt; 0 || gameInstanceId &gt;= gameInstances.size()) return ResponseEntity.badRequest().build();</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">        List&lt;SimpleUser&gt; playerList = players.stream().filter(x -&gt; x.getGameInstanceId() == gameInstanceId).collect(Collectors.toList());</span>
+<span class="nc" id="L155">        return ResponseEntity.ok(playerList);</span>
+    }
+
+    /**
+     * Additional method that returns all the players that are currently playing in a given game instance
+     *
+     * @param gameInstanceId ID of GameInstance
+     * @return ResponseEntity object that returns 400 BAD SYNTAX if the gameInstanceId is not in the appropriate range, or
+     * 200 STATUS OK with a body consisting of the list of currently playing users from a game uniquely identified
+     * by gameInstanceID
+     */
+    @GetMapping(&quot;/{gameInstanceId}/connectedPlayers&quot;)
+    public ResponseEntity&lt;List&lt;SimpleUser&gt;&gt; connectedPlayers(@PathVariable int gameInstanceId) {
+<span class="nc bnc" id="L168" title="All 4 branches missed.">        if (gameInstanceId &lt; 0 || gameInstanceId &gt;= gameInstances.size()) return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L169">        List&lt;SimpleUser&gt; playerList = gameInstances.get(gameInstanceId).getPlayers().stream().map(Player::toSimpleUser).collect(Collectors.toList());</span>
+<span class="nc" id="L170">        return ResponseEntity.ok(playerList);</span>
+    }
+
+
+    /**
+     * Method that returns last instance of a singleplayer ID
+     *
+     * @return the ID of the last SinglePlayer Game Instance
+     */
+    @GetMapping(&quot;/getLastGIIdSingle&quot;)
+    public ResponseEntity&lt;Integer&gt; getLastGIIdSingle() {
+<span class="nc bnc" id="L181" title="All 4 branches missed.">        if (currentSPGIId &lt; 0 || currentSPGIId &gt;= gameInstances.size()) return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L182">        return ResponseEntity.ok(currentSPGIId);</span>
+
+    }
+
+    /**
+     * Method that updates the score of a given player on the server-side
+     *
+     * @param id     long primitive that uniquely identifies our SimpleUser instance
+     * @param player SimpleUser instance that needs to have his/her score updated
+     * @return ResponseEntity that returns 404 NOT_FOUND if the player does not exist, or 200 STATUS OK with a body
+     * consisting of information regarding modified player
+     */
+    @PutMapping(&quot;/{id}/updatePlayer&quot;)
+    public ResponseEntity&lt;SimpleUser&gt; updatePlayer(@PathVariable(&quot;id&quot;) long id, @RequestBody SimpleUser player) {
+<span class="nc bnc" id="L196" title="All 2 branches missed.">        if (player == null)</span>
+<span class="nc" id="L197">            return ResponseEntity.notFound().build();</span>
+
+<span class="nc" id="L199">        SimpleUser playerToModify = null;</span>
+
+<span class="nc bnc" id="L201" title="All 2 branches missed.">        for (SimpleUser pl : players)</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">            if (pl.getId() == player.getId()) {</span>
+<span class="nc" id="L203">                playerToModify = pl;</span>
+<span class="nc" id="L204">                break;</span>
+            }
+<span class="nc bnc" id="L206" title="All 2 branches missed.">        if (playerToModify == null)</span>
+<span class="nc" id="L207">            return ResponseEntity.notFound().build();</span>
+        else {
+<span class="nc" id="L209">            playerToModify.setScore(player.getScore());</span>
+<span class="nc" id="L210">            List&lt;Player&gt; listOfPlayers = gameInstances.get(player.getGameInstanceId()).getPlayers();</span>
+<span class="nc bnc" id="L211" title="All 2 branches missed.">            for (Player pl : listOfPlayers)</span>
+<span class="nc bnc" id="L212" title="All 2 branches missed.">                if (pl.getId() == player.getId()) {</span>
+<span class="nc" id="L213">                    pl.setScore(player.getScore());</span>
+<span class="nc" id="L214">                    break;</span>
+                }
+<span class="nc" id="L216">            logger.info(&quot;[GI &quot; + (player.getGameInstanceId()) + &quot;] PLAYER (&quot; + player.getId() + &quot;) HAS NOW: &quot; + player.getScore() + &quot; POINTS!&quot;);</span>
+<span class="nc" id="L217">            return ResponseEntity.ok(playerToModify);</span>
+        }
+
+    }
+
+    //    ---------------------------------------------------------------------------
+    //    ----------------------------     SERVERS     ------------------------------
+    //    ---------------------------------------------------------------------------
+
+    /**
+     * Method that returns a list of available servers
+     *
+     * @return List of all the servers with gameState = INLOBBY
+     */
+    @GetMapping(&quot;/available-servers&quot;)
+    public ResponseEntity&lt;List&lt;String&gt;&gt; getServers() {
+<span class="nc" id="L233">        List&lt;String&gt; res = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L234" title="All 2 branches missed.">        for (String serverName : serverNames.keySet()) {</span>
+<span class="nc bnc" id="L235" title="All 2 branches missed.">            if (gameInstances.get(serverNames.get(serverName)).getState() == GameState.INLOBBY)</span>
+<span class="nc" id="L236">                res.add(serverName);</span>
+<span class="nc" id="L237">        }</span>
+<span class="nc" id="L238">        return ResponseEntity.ok(res);</span>
+    }
+
+    /**
+     * Method that returns a List of all servers
+     *
+     * @return List of all servers
+     */
+    @GetMapping(&quot;/servers&quot;)
+    public ResponseEntity&lt;Set&lt;String&gt;&gt; getAllServers() {
+<span class="nc" id="L248">        return ResponseEntity.ok(serverNames.keySet());</span>
+    }
+
+    /**
+     * Method that returns a List of all players connected to a given server.
+     *
+     * @param serverName name of the server
+     * @return List of all players connected to a given server
+     */
+    @GetMapping(&quot;/{serverName}/connectedPlayersOnServer&quot;)
+    public ResponseEntity&lt;List&lt;String&gt;&gt; connectedPlayersOnServer(@PathVariable String serverName) {
+<span class="nc bnc" id="L259" title="All 2 branches missed.">        if (serverName == null) return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L260">        List&lt;String&gt; availableServers = getServers().getBody();</span>
+<span class="nc bnc" id="L261" title="All 2 branches missed.">        if (!availableServers.contains(serverName)) return ResponseEntity.badRequest().build();</span>
+
+
+<span class="nc" id="L264">        GameInstanceServer lastGIS = null;</span>
+<span class="nc bnc" id="L265" title="All 2 branches missed.">        for (GameInstanceServer gi : gameInstances)</span>
+<span class="nc bnc" id="L266" title="All 4 branches missed.">            if (gi.getType() == GameInstance.MULTI_PLAYER &amp;&amp; gi.getServerName().equals(serverName))</span>
+<span class="nc" id="L267">                lastGIS = gi;</span>
+
+<span class="nc" id="L269">        List&lt;String&gt; playerNames = lastGIS.getPlayers().stream().map(Player::getName).collect(Collectors.toList());</span>
+<span class="nc" id="L270">        return ResponseEntity.ok(playerNames);</span>
+    }
+
+    /**
+     * Method that adds a new server to the list of all servers
+     *
+     * @param serverName
+     * @return serverName if added successfully, if the server is already there
+     */
+    @PostMapping(&quot;/servers&quot;)
+    public ResponseEntity&lt;String&gt; addServer(@RequestBody String serverName) {
+<span class="nc bnc" id="L281" title="All 2 branches missed.">        if (this.serverNames.containsKey(serverName))</span>
+<span class="nc" id="L282">            return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L283">        createNewMultiplayerLobby(serverName);</span>
+<span class="nc" id="L284">        return ResponseEntity.ok(serverName);</span>
+    }
+
+    /**
+     * Method that changes the name of a given server, if the server does not have any connected players
+     *
+     * @param oldServerName the server to rename
+     * @param newServerName new server name
+     * @return newServerName if renamed succesfully, bad request if oldServerName not found or if the names are the same
+     */
+    @PutMapping(&quot;/{oldServerName}/updateServer&quot;)
+    public ResponseEntity&lt;String&gt; updateServer(@PathVariable String oldServerName, @RequestBody String newServerName) {
+<span class="nc bnc" id="L296" title="All 4 branches missed.">        if (!this.serverNames.containsKey(oldServerName) || oldServerName.equals(newServerName))</span>
+<span class="nc" id="L297">            return ResponseEntity.badRequest().build();</span>
+<span class="nc bnc" id="L298" title="All 2 branches missed.">        if (this.gameInstances.get(this.serverNames.get(oldServerName)).getPlayers().size() != 0)</span>
+<span class="nc" id="L299">            return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L300">        serverNames.put(newServerName, serverNames.get(oldServerName));</span>
+<span class="nc bnc" id="L301" title="All 2 branches missed.">        if (gameInstances.get(serverNames.get(newServerName)) == null)</span>
+<span class="nc" id="L302">            createNewMultiplayerLobby(newServerName);</span>
+<span class="nc" id="L303">        gameInstances.get(serverNames.get(oldServerName)).setServerName(newServerName);</span>
+<span class="nc" id="L304">        serverNames.remove(oldServerName);</span>
+<span class="nc" id="L305">        return ResponseEntity.ok(newServerName);</span>
+    }
+
+    /**
+     * Method that deletes a server from the server list, if the server does not have any connected players
+     *
+     * @param serverName to remove
+     * @return removed server name, bad request if not found
+     */
+    @DeleteMapping(&quot;/{serverName}/removeServer&quot;)
+    public ResponseEntity&lt;String&gt; removeServer(@PathVariable String serverName) {
+<span class="nc bnc" id="L316" title="All 2 branches missed.">        if (!this.serverNames.containsKey(serverName))</span>
+<span class="nc" id="L317">            return ResponseEntity.notFound().build();</span>
+<span class="nc bnc" id="L318" title="All 2 branches missed.">        if (this.gameInstances.get(this.serverNames.get(serverName)).getPlayers().size() != 0)</span>
+<span class="nc" id="L319">            return ResponseEntity.badRequest().build();</span>
+<span class="nc" id="L320">        serverNames.remove(serverName);</span>
+<span class="nc" id="L321">        return ResponseEntity.ok().build();</span>
+
+    }
+
+
+    // ------------------------------------ ADDITIONAL METHODS ------------------------------------------------------
+
+    /**
+     * Creates a new multiplayer gameInstanceServer, with the next available Id, this class as a controller,
+     * and assigns it to a given, putting it in a map as an serverName - Id pair.
+     *
+     * @param serverName Server to create the lobby on
+     */
+    public void createNewMultiplayerLobby(String serverName) {
+<span class="nc" id="L335">        GameInstanceServer newGameInstance = new GameInstanceServer(gameInstances.size(), GameInstance.MULTI_PLAYER, this, msgs, serverName);</span>
+<span class="nc" id="L336">        newGameInstance.setState(GameState.INLOBBY);</span>
+<span class="nc" id="L337">        gameInstances.add(newGameInstance);</span>
+<span class="nc" id="L338">        currentMPGIId = newGameInstance.getId();</span>
+<span class="nc" id="L339">        serverNames.put(serverName, currentMPGIId);</span>
+<span class="nc" id="L340">    }</span>
+
+    /**
+     * A getter for all the gameInstances
+     *
+     * @return a list of all gameInstances
+     */
+    public List&lt;GameInstanceServer&gt; getGameInstances() {
+<span class="nc" id="L348">        return gameInstances;</span>
+    }
+
+    /**
+     * A getter for all the players
+     *
+     * @return A list of all players
+     */
+    public List&lt;SimpleUser&gt; getPlayers() {
+<span class="nc" id="L357">        return players;</span>
+    }
+
+    /**
+     * A getter for the map of serverNames and gameInstance Ids
+     *
+     * @return A Map of all serverName - gameInstanceID pairs
+     */
+    public Map&lt;String, Integer&gt; getServerNames() {
+<span class="nc" id="L366">        return serverNames;</span>
+    }
+
+    /**
+     * A getter for ID of the current MP gameInstance
+     *
+     * @return An integer representing current MP gameInstance ID
+     */
+    public int getCurrentMPGIId() {
+<span class="nc" id="L375">        return currentMPGIId;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

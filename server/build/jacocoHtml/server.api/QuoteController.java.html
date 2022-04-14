@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>QuoteController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">server</a> &gt; <a href="index.source.html" class="el_package">server.api</a> &gt; <span class="el_source">QuoteController.java</span></div><h1>QuoteController.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2021 Delft University of Technology
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package server.api;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+
+import commons.Person;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import commons.Quote;
+import server.database.QuoteRepository;
+
+@RestController
+@RequestMapping(&quot;/api/quotes&quot;)
+public class QuoteController {
+
+    private final Random random;
+    private final QuoteRepository repo;
+
+<span class="nc" id="L36">    public QuoteController(Random random, QuoteRepository repo) {</span>
+<span class="nc" id="L37">        this.random = random;</span>
+<span class="nc" id="L38">        this.repo = repo;</span>
+<span class="nc" id="L39">    }</span>
+
+    @GetMapping(path = {&quot;&quot;, &quot;/&quot;})
+    public List&lt;Quote&gt; getAll() {
+<span class="nc" id="L43">        return repo.findAll();</span>
+    }
+
+    @GetMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Quote&gt; getById(@PathVariable(&quot;id&quot;) long id) {
+<span class="nc bnc" id="L48" title="All 4 branches missed.">        if (id &lt; 0 || !repo.existsById(id)) {</span>
+<span class="nc" id="L49">            return ResponseEntity.badRequest().build();</span>
+        }
+<span class="nc" id="L51">        return ResponseEntity.ok(repo.findById(id).get());</span>
+    }
+
+    @PostMapping(path = {&quot;&quot;, &quot;/&quot;})
+    public ResponseEntity&lt;Quote&gt; add(@RequestBody Quote quote) {
+
+<span class="nc bnc" id="L57" title="All 6 branches missed.">        if (quote.person == null || isNullOrEmpty(quote.person.firstName) || isNullOrEmpty(quote.person.lastName)</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">                || isNullOrEmpty(quote.quote)) {</span>
+<span class="nc" id="L59">            return ResponseEntity.badRequest().build();</span>
+        }
+
+<span class="nc" id="L62">        Quote saved = repo.save(quote);</span>
+<span class="nc" id="L63">        return ResponseEntity.ok(saved);</span>
+    }
+
+    private static boolean isNullOrEmpty(String s) {
+<span class="nc bnc" id="L67" title="All 4 branches missed.">        return s == null || s.isEmpty();</span>
+    }
+
+    @GetMapping(&quot;/rnd&quot;)
+    public ResponseEntity&lt;Quote&gt; getRandom() {
+<span class="nc" id="L72">        List&lt;Quote&gt; q = repo.findAll();</span>
+<span class="nc" id="L73">        var idx = random.nextInt((int) q.size());</span>
+<span class="nc" id="L74">        return ResponseEntity.ok(q.get(idx));</span>
+    }
+
+    @PostMapping(&quot;/last-person&quot;)
+    public ResponseEntity&lt;Quote&gt; removeByString(@RequestBody String string) {
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (string == null)</span>
+<span class="nc" id="L80">            return ResponseEntity.of(Optional.empty());</span>
+<span class="nc" id="L81">        int N = (int) (repo.count());</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if (N &gt;= 1) {</span>
+<span class="nc" id="L83">            Person lastPerson = repo.findAll().get(N - 1).person;</span>
+<span class="nc" id="L84">            String firstName = lastPerson.firstName;</span>
+<span class="nc" id="L85">            String lastName = lastPerson.lastName;</span>
+<span class="nc" id="L86">            Quote quote = new Quote(new Person(firstName, lastName), string);</span>
+<span class="nc" id="L87">            repo.save(quote);</span>
+<span class="nc" id="L88">            return ResponseEntity.ok(quote);</span>
+<span class="nc" id="L89">        } else return ResponseEntity.of(Optional.empty());</span>
+    }
+
+    @DeleteMapping(&quot;/last&quot;)
+    public ResponseEntity&lt;Quote&gt; removeLastQuote() {
+<span class="nc" id="L94">        List&lt;Quote&gt; quotesList = repo.findAll();</span>
+<span class="nc" id="L95">        int N = (int) repo.count();</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        if (N &gt;= 1) {</span>
+<span class="nc" id="L97">            Quote lastQuote = quotesList.get(N - 1);</span>
+<span class="nc" id="L98">            repo.delete(lastQuote);</span>
+<span class="nc" id="L99">            return ResponseEntity.ok(lastQuote);</span>
+<span class="nc" id="L100">        } else return ResponseEntity.of(Optional.empty());</span>
+    }
+
+    @DeleteMapping(&quot;/by-string&quot;)
+    public ResponseEntity&lt;Quote&gt; deleteByString(@RequestBody String string) {
+<span class="nc bnc" id="L105" title="All 2 branches missed.">        if (string == null)</span>
+<span class="nc" id="L106">            return ResponseEntity.of(Optional.empty());</span>
+
+<span class="nc" id="L108">        List&lt;Quote&gt; quoteList = repo.findAll();</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">        for (Quote q : quoteList) {</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">            if (q.quote.equals(string)) {</span>
+<span class="nc" id="L111">                Quote removedQuote = q;</span>
+<span class="nc" id="L112">                repo.delete(q);</span>
+<span class="nc" id="L113">                return ResponseEntity.ok(removedQuote);</span>
+            }
+<span class="nc" id="L115">        }</span>
+        // No such quote in quoteRepository
+<span class="nc" id="L117">        return ResponseEntity.of(Optional.empty());</span>
+    }
+
+    @GetMapping(&quot;/middle-quote&quot;)
+    public Quote getMiddleQuote() {
+        try {
+<span class="nc bnc" id="L123" title="All 2 branches missed.">            if (repo.count() &gt; 0) {</span>
+<span class="nc" id="L124">                long size = repo.count();</span>
+<span class="nc" id="L125">                List&lt;Quote&gt; quotes = repo.findAll();</span>
+<span class="nc" id="L126">                return quotes.get((int) (size / 2)); // Middle quote</span>
+            } else
+<span class="nc" id="L128">                return null;</span>
+<span class="nc" id="L129">        } catch (NullPointerException e) {</span>
+<span class="nc" id="L130">            return null;</span>
+        }
+    }
+
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Quote&gt; removeById(@PathVariable(&quot;id&quot;) long id) {
+<span class="nc bnc" id="L136" title="All 4 branches missed.">        if (id &lt;= 0 || !repo.existsById(id))</span>
+<span class="nc" id="L137">            ResponseEntity.of(Optional.empty());</span>
+
+<span class="nc" id="L139">        Optional&lt;Quote&gt; q = repo.findById(id);</span>
+<span class="nc" id="L140">        repo.deleteById(id);</span>
+<span class="nc" id="L141">        return ResponseEntity.of(q);</span>
+    }
+
+    @PostMapping(&quot;/greet-person&quot;)
+    public Quote greetPerson(@RequestBody Person person) {
+        try {
+<span class="nc bnc" id="L147" title="All 4 branches missed.">            if (person.firstName == null || person.lastName == null</span>
+<span class="nc bnc" id="L148" title="All 4 branches missed.">                    || person.firstName.equals(&quot;&quot;) || person.lastName.equals(&quot;&quot;)) {</span>
+<span class="nc" id="L149">                return new Quote(new Person(&quot;-&quot;, &quot;-&quot;), &quot;You are not a person&quot;);</span>
+            } else {
+<span class="nc" id="L151">                String q = &quot;Hi there, &quot; + person.firstName + &quot; &quot; + person.lastName + &quot;!&quot;;</span>
+<span class="nc" id="L152">                Quote quote = new Quote(new Person(person.firstName, person.lastName), q);</span>
+<span class="nc" id="L153">                repo.save(quote);</span>
+<span class="nc" id="L154">                return quote;</span>
+            }
+
+<span class="nc" id="L157">        } catch (NullPointerException e) {</span>
+<span class="nc" id="L158">            return new Quote(new Person(&quot;-&quot;, &quot;-&quot;), &quot;missing body&quot;);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.6.202009150832</span></div></body></html>

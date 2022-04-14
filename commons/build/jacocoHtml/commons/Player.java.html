@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Player.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">commons</a> &gt; <a href="index.source.html" class="el_package">commons</a> &gt; <span class="el_source">Player.java</span></div><h1>Player.java</h1><pre class="source lang-java linenums">package commons;
+
+import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.Objects;
+
+@Entity
+@Table(name = &quot;Player&quot;)
+public class Player {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private long id;
+
+    private String name;
+
+    private int score;
+
+    private int status;
+
+    private ArrayList&lt;PowerUp&gt; powerUpUsed;
+
+<span class="nc" id="L23">    public Player() {</span>
+        //object mapping
+<span class="nc" id="L25">    }</span>
+
+<span class="nc" id="L27">    public Player(String name) {</span>
+<span class="nc" id="L28">        this.name = name;</span>
+<span class="nc" id="L29">        this.score = 0;</span>
+<span class="nc" id="L30">        this.status = 0;</span>
+<span class="nc" id="L31">        this.powerUpUsed = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L32">    }</span>
+
+<span class="nc" id="L34">    public Player(String name, int score, int status, ArrayList&lt;PowerUp&gt; powerUp) {</span>
+<span class="nc" id="L35">        this.name = name;</span>
+<span class="nc" id="L36">        this.score = score;</span>
+<span class="nc" id="L37">        this.status = status;</span>
+<span class="nc" id="L38">        this.powerUpUsed = powerUp;</span>
+<span class="nc" id="L39">    }</span>
+
+    @Column(name = &quot;name&quot;)
+    public String getName() {
+<span class="nc" id="L43">        return name;</span>
+    }
+
+    public void setName(String name) {
+<span class="nc" id="L47">        this.name = name;</span>
+<span class="nc" id="L48">    }</span>
+
+    @Column(name = &quot;score&quot;)
+    public int getScore() {
+<span class="nc" id="L52">        return score;</span>
+    }
+
+    public void setScore(int score) {
+<span class="nc" id="L56">        this.score = score;</span>
+<span class="nc" id="L57">    }</span>
+
+    public void addScore(int score) {
+<span class="nc" id="L60">        this.score += score;</span>
+<span class="nc" id="L61">    }</span>
+
+    @Column(name = &quot;status&quot;)
+    public int getStatus() {
+<span class="nc" id="L65">        return status;</span>
+    }
+
+    public void setStatus(int status) {
+<span class="nc" id="L69">        this.status = status;</span>
+<span class="nc" id="L70">    }</span>
+
+    @Column(name = &quot;powerUps&quot;)
+    public ArrayList&lt;PowerUp&gt; getPowerUps() {
+<span class="nc" id="L74">        return powerUpUsed;</span>
+    }
+
+    public void setPowerUps(ArrayList&lt;PowerUp&gt; powerUp) {
+<span class="nc" id="L78">        this.powerUpUsed = powerUp;</span>
+<span class="nc" id="L79">    }</span>
+
+    public void addPowerUp(PowerUp powerUp) {
+<span class="nc" id="L82">        this.powerUpUsed.add(powerUp);</span>
+<span class="nc" id="L83">    }</span>
+
+    @Column(name = &quot;id&quot;)
+    public long getId() {
+<span class="nc" id="L87">        return id;</span>
+    }
+
+    public void setId(long id) {
+<span class="nc" id="L91">        this.id = id;</span>
+<span class="nc" id="L92">    }</span>
+
+    @Override
+    public boolean equals(Object o) {
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        if (this == o) return true;</span>
+<span class="nc bnc" id="L97" title="All 4 branches missed.">        if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="nc" id="L98">        Player player = (Player) o;</span>
+<span class="nc bnc" id="L99" title="All 8 branches missed.">        return score == player.score &amp;&amp; status == player.status &amp;&amp; id == player.id &amp;&amp; Objects.equals(name, player.name)</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">                &amp;&amp; Objects.equals(powerUpUsed, player.powerUpUsed);</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L105">        return Objects.hash(name, score, status, powerUpUsed, id);</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L110">        return &quot;Player{&quot; +</span>
+                &quot;name='&quot; + name + '\'' +
+                &quot;, score=&quot; + score +
+                &quot;, status=&quot; + status +
+                &quot;, powerUp=&quot; + powerUpUsed +
+                &quot;, id=&quot; + id +
+                '}';
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,361 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GameInstanceServer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">server</a> &gt; <a href="index.source.html" class="el_package">server.api</a> &gt; <span class="el_source">GameInstanceServer.java</span></div><h1>GameInstanceServer.java</h1><pre class="source lang-java linenums">package server.api;
+
+import commons.*;
+import commons.player.SimpleUser;
+import commons.powerups.AnswerPU;
+import commons.powerups.PointsPU;
+import commons.powerups.TimePU;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Async;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+
+public class GameInstanceServer extends GameInstance {
+
+    String serverName;
+    GameController gameController;
+    SimpMessagingTemplate msgs;
+<span class="fc" id="L25">    int questionNumber = -1;</span>
+    private static final int questionTime = 20000;
+    private static final int postQuestionTime = 5000;
+    private final List&lt;ServerAnswer&gt; answers;
+    private long startingTime;
+<span class="fc" id="L30">    Logger logger = LoggerFactory.getLogger(GameInstanceServer.class);</span>
+    private TimerTask questionTask;
+    private final Timer questionTimer;
+
+
+    private final Timer countdownTimer;
+
+    /**
+     * Creates new GameInstance for multiplayer purposes
+     * @param id ID of GameInstance
+     * @param type Type of GameInstance (SINGLEPLAYER OR MULTIPLAYER)
+     * @param controller GameController (injected)
+     * @param msgs SimpMessagingTemplate for websockets
+     * @param serverName Name of Server
+     */
+    public GameInstanceServer(int id, int type, GameController controller, SimpMessagingTemplate msgs, String serverName) {
+<span class="fc" id="L46">        super(id, type);</span>
+<span class="fc" id="L47">        this.gameController = controller;</span>
+<span class="fc" id="L48">        this.msgs = msgs;</span>
+<span class="fc" id="L49">        this.serverName = serverName;</span>
+<span class="fc" id="L50">        answers = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L51">        questionTimer = new Timer();</span>
+<span class="fc" id="L52">        countdownTimer = new Timer();</span>
+<span class="fc" id="L53">    }</span>
+
+
+    /**
+     * QuestionHowMuch uses activity 0
+     * QuestionWhichOne uses activity 1
+     * QuestionInsteadOf uses activity 2,3,4,5
+     * QuestionMoreExpensive uses activity 6,7,8
+     * After that, the mod is 1 and QuestionHowMuch uses activity 9 etc
+     *
+     * @param activities List of 60 activities
+     */
+    @Override
+    public void generateQuestions(List&lt;Activity&gt; activities) {
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (activities.size() != 60) throw new IllegalArgumentException();</span>
+<span class="fc" id="L68">        List&lt;Question&gt; questions = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">        for (int i = 0; i &lt; 20; i++) {</span>
+<span class="fc" id="L70">            int remainder = i % 4;</span>
+<span class="fc" id="L71">            int mod = i / 4;</span>
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">            if (questions.size() == 20) break;</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">            if (remainder == 3) questions.add(new QuestionMoreExpensive</span>
+                    (new Activity[]{
+<span class="fc" id="L75">                            activities.get(9 * mod + 6),</span>
+<span class="fc" id="L76">                            activities.get(9 * mod + 7),</span>
+<span class="fc" id="L77">                            activities.get(9 * mod + 8)},</span>
+                            i + 1));
+<span class="fc bfc" id="L79" title="All 2 branches covered.">            else if (remainder == 2) questions.add(new QuestionInsteadOf(activities.get(9 * mod + 2),</span>
+<span class="fc" id="L80">                    new Activity[]{activities.get(9 * mod + 3),</span>
+<span class="fc" id="L81">                            activities.get(9 * mod + 4), activities.get(9 * mod + 5)}, i + 1));</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">            else if (remainder == 1) questions.add(new QuestionWhichOne(activities.get(9 * mod + 1), i + 1));</span>
+<span class="fc" id="L83">            else questions.add(new QuestionHowMuch(activities.get(9 * mod), i + 1));</span>
+        }
+<span class="fc" id="L85">        setQuestions(questions);</span>
+<span class="fc" id="L86">    }</span>
+
+    /**
+     * Starts countdown of this gameInstance, and starts the game after n seconds
+     */
+    public void startCountdown() {
+<span class="fc" id="L92">        setState(GameState.STARTING);</span>
+
+<span class="fc" id="L94">        TimerTask countdownTask = new TimerTask() {</span>
+<span class="fc" id="L95">            int time = 6;</span>
+
+            @Override
+            public void run() {
+<span class="fc" id="L99">                time--;</span>
+<span class="fc" id="L100">                msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/time&quot;, time);</span>
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">                if (time == 0) {</span>
+<span class="nc" id="L102">                    cancel();</span>
+<span class="nc" id="L103">                    startGame(gameController.activityController.getRandom60().getBody());</span>
+                }
+<span class="fc" id="L105">            }</span>
+        };
+
+<span class="fc" id="L108">        countdownTimer.scheduleAtFixedRate(countdownTask, 0, 1000);</span>
+<span class="fc" id="L109">    }</span>
+
+
+    /**
+     * Generates the questions for the new game and displays the first question
+     * @param activities List of activities used for generating questions (needs 60 activities.)
+     */
+    @Async
+    public void startGame(List&lt;Activity&gt; activities) {
+<span class="fc" id="L118">        generateQuestions(activities);</span>
+<span class="fc" id="L119">        nextQuestion();</span>
+<span class="fc" id="L120">    }</span>
+
+    /**
+     * Sends a new question to all clients connected to this gameInstance
+     * @param questionNumber Number of question that needs to be sent.
+     */
+    public void sendQuestion(int questionNumber) {
+<span class="fc" id="L127">        Question currentQuestion = getQuestions().get(questionNumber);</span>
+<span class="fc" id="L128">        logger.info(&quot;[GI &quot; + getId() + &quot;] Question &quot; + (questionNumber + 1) + &quot; sent.&quot;);</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        if (currentQuestion instanceof QuestionHowMuch) {</span>
+<span class="fc" id="L130">            msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/questionhowmuch&quot;, getQuestions().get(questionNumber));</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">        } else if (currentQuestion instanceof QuestionMoreExpensive) {</span>
+<span class="fc" id="L132">            msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/questionmoreexpensive&quot;, getQuestions().get(questionNumber));</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">        } else if (currentQuestion instanceof QuestionWhichOne) {</span>
+<span class="fc" id="L134">            msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/questionwhichone&quot;, getQuestions().get(questionNumber));</span>
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">        } else if (currentQuestion instanceof QuestionInsteadOf) {</span>
+<span class="fc" id="L136">            msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/questioninsteadof&quot;, getQuestions().get(questionNumber));</span>
+<span class="nc" id="L137">        } else throw new IllegalStateException();</span>
+<span class="fc" id="L138">    }</span>
+
+    /**
+     * Goes to the next question in the game
+     * Displays the leaderboard after 10 and 20 questions
+     */
+    public void nextQuestion() {
+<span class="fc" id="L145">        setState(GameState.INQUESTION);</span>
+<span class="fc bfc" id="L146" title="All 2 branches covered.">        if (questionTask != null) questionTask.cancel();</span>
+<span class="fc" id="L147">        questionNumber++;</span>
+<span class="fc bfc" id="L148" title="All 2 branches covered.">        if (questionNumber == 10) {</span>
+<span class="fc" id="L149">            Thread thread = new Thread(new Runnable() {</span>
+                @Override
+                public void run() {
+<span class="fc" id="L152">                    msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/MPgameMiddle&quot;, getPlayers());</span>
+                    try {
+<span class="nc" id="L154">                        Thread.sleep(5000);</span>
+<span class="nc" id="L155">                    } catch (InterruptedException e) {</span>
+<span class="nc" id="L156">                        System.out.println(&quot;Something went wrong with thread at line 130 : GameInstanceServer&quot;);</span>
+<span class="nc" id="L157">                    }</span>
+
+<span class="nc" id="L159">                    sendQuestion(questionNumber);</span>
+<span class="nc" id="L160">                    startingTime = System.currentTimeMillis();</span>
+<span class="nc" id="L161">                    answers.clear();</span>
+<span class="nc" id="L162">                    questionTask = new TimerTask() {</span>
+                        @Override
+                        public void run() {
+<span class="nc" id="L165">                            postQuestion();</span>
+<span class="nc" id="L166">                        }</span>
+                    };
+<span class="nc" id="L168">                    questionTimer.schedule(questionTask, questionTime);</span>
+<span class="nc" id="L169">                }</span>
+            });
+<span class="fc" id="L171">            thread.start();</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">        } else if (questionNumber &gt; 19) {</span>
+<span class="fc" id="L173">            msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/MPgameOver&quot;, getPlayers());</span>
+        } else {
+<span class="fc" id="L175">            sendQuestion(questionNumber);</span>
+<span class="fc" id="L176">            startingTime = System.currentTimeMillis();</span>
+<span class="fc" id="L177">            answers.clear();</span>
+<span class="fc" id="L178">            questionTask = new TimerTask() {</span>
+                    @Override
+                    public void run() {
+<span class="nc" id="L181">                        postQuestion();</span>
+<span class="nc" id="L182">                    }</span>
+                };
+<span class="fc" id="L184">            questionTimer.schedule(questionTask, questionTime);</span>
+        }
+<span class="fc" id="L186">    }</span>
+
+    /**
+     * Sends the post-question state to all clients and goes to the next question after n seconds.
+     */
+    public void postQuestion() {
+<span class="nc" id="L192">        questionTask.cancel();</span>
+<span class="nc" id="L193">        setState(GameState.POSTQUESTION);</span>
+<span class="nc" id="L194">        msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/postquestion&quot;, getCurrentQuestion().getCorrectAnswer());</span>
+<span class="nc" id="L195">        startingTime = System.currentTimeMillis();</span>
+<span class="nc" id="L196">        questionTask = new TimerTask() {</span>
+            @Override
+            public void run() {
+<span class="nc" id="L199">                nextQuestion();</span>
+<span class="nc" id="L200">            }</span>
+        };
+<span class="nc" id="L202">        questionTimer.schedule(questionTask, postQuestionTime);</span>
+<span class="nc" id="L203">    }</span>
+
+    /**
+     * Returns the time left for the question or post-question
+     * @return Time left in milliseconds.
+     */
+    public int getTimeLeft() {
+<span class="nc" id="L210">        int timeSpent = (int) (System.currentTimeMillis() - startingTime);</span>
+<span class="nc bnc" id="L211" title="All 2 branches missed.">        if (getState() == GameState.POSTQUESTION) return (postQuestionTime - timeSpent);</span>
+<span class="nc" id="L212">        return Math.max(questionTime - timeSpent, 0);</span>
+    }
+
+    /**
+     * gets the current question in the game
+     * @return the current question
+     */
+    public Question getCurrentQuestion() {
+<span class="fc" id="L220">        return getQuestions().get(questionNumber);</span>
+    }
+
+    /**
+     * Gets the correct answer for the current question in the game
+     * @return the correct answer
+     */
+    public long getCorrectAnswer() {
+<span class="fc" id="L228">        return getQuestions().get(questionNumber).getAnswer();</span>
+    }
+
+    /**
+     * Sends a message to the players that are in the gameInstance
+     */
+    public void updatePlayerList() {
+<span class="nc" id="L235">        msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/players&quot;, getPlayers().size());</span>
+<span class="nc" id="L236">    }</span>
+
+    /**
+     * Adds a player's answer to the answers list, and if that list is the size of the list of all players,
+     * that means all the players have answered and we go to method postQuestion()
+     * @param player the player that sent the answer
+     * @param answer the answer the player gave
+     * @return false if anything goes wrong (the player already sent that answer), true otherwise
+     */
+    public boolean answerQuestion(SimpleUser player, Answer answer) {
+<span class="nc" id="L246">        if (answers.stream()</span>
+<span class="nc" id="L247">                .map(x -&gt; x.getPlayer().getName())</span>
+<span class="nc bnc" id="L248" title="All 2 branches missed.">                .noneMatch(x -&gt; x.equals(player.getName()))) {</span>
+<span class="nc" id="L249">            answers.add(new ServerAnswer(answer.getAnswer(), player));</span>
+<span class="nc bnc" id="L250" title="All 2 branches missed.">            if (answers.size() == getPlayers().size()) {</span>
+<span class="nc" id="L251">                postQuestion();</span>
+            }
+<span class="nc" id="L253">            logger.info(&quot;[GI &quot; + getId() + &quot;] Answer received from &quot; + player.getName() + &quot; = &quot; + answer.getAnswer());</span>
+<span class="nc" id="L254">            return true;</span>
+        }
+<span class="nc" id="L256">        return false;</span>
+    }
+
+    /**
+     * Sends emoji to all connected clients
+     * @param emoji Emoji to show
+     */
+    public void sendEmoji(Emoji emoji) {
+<span class="nc" id="L264">        msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/emoji&quot;, emoji);</span>
+<span class="nc" id="L265">    }</span>
+
+    /**
+     * A player has used time-reducing powerUp. Send it to all the players from their game.
+     *
+     * @param timePU powerUp used
+     */
+    public void decreaseTime(TimePU timePU) {
+<span class="nc bnc" id="L273" title="All 2 branches missed.">        if (getTimeLeft() &gt; 1) {</span>
+<span class="nc" id="L274">            msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/decrease-time&quot;, timePU);</span>
+        }
+<span class="nc" id="L276">    }</span>
+
+    /**
+     * A player has used the double-points powerUp. Send it to all the players from their game.
+     *
+     * @param pointsPU powerUp used
+     */
+    public void doublePoints(PointsPU pointsPU) {
+<span class="nc" id="L284">        msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/double-points&quot;, pointsPU);</span>
+<span class="nc" id="L285">    }</span>
+
+    /**
+     * A player has used the remove-answer powerUp. Send it to all the players from their game.
+     *
+     * @param answerPU powerUp used
+     */
+    public void removeAnswer(AnswerPU answerPU) {
+<span class="nc" id="L293">        msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/remove-incorrect-answer&quot;, answerPU);</span>
+<span class="nc" id="L294">    }</span>
+
+    /**
+     * Removes a player from the game
+     * @param player the player to be removed
+     * @return true if the disconnection was successful, false otherwise
+     */
+    public boolean disconnectPlayer(SimpleUser player) {
+<span class="nc" id="L302">        boolean status = getPlayers().remove(player);</span>
+<span class="nc" id="L303">        msgs.convertAndSend(&quot;/topic/&quot; + getId() + &quot;/disconnectplayer&quot;, player);</span>
+<span class="nc" id="L304">        updatePlayerList();</span>
+<span class="nc bnc" id="L305" title="All 4 branches missed.">        if (getState() != GameState.INLOBBY &amp;&amp; getPlayers().isEmpty()) {</span>
+<span class="nc" id="L306">            stopGameInstance();</span>
+        }
+<span class="nc" id="L308">        return status;</span>
+    }
+
+    /**
+     * Stops the gameInstance and creates a new lobby for the server the gameInstance was on
+     * Also stops the timers
+     */
+    public void stopGameInstance() {
+<span class="nc bnc" id="L316" title="All 2 branches missed.">        if (gameController.getServerNames().get(serverName) == getId())</span>
+<span class="nc" id="L317">            gameController.createNewMultiplayerLobby(this.serverName);</span>
+        try {
+<span class="nc" id="L319">            countdownTimer.cancel();</span>
+<span class="nc" id="L320">            questionTask.cancel();</span>
+<span class="nc" id="L321">            questionTimer.cancel();</span>
+<span class="nc" id="L322">        } catch (NullPointerException e) {</span>
+<span class="nc" id="L323">            logger.info(&quot;Timer has already stopped&quot;);</span>
+        } finally {
+<span class="nc" id="L325">            logger.info(&quot;[GI &quot; + getId() + &quot;] GameInstance stopped!&quot;);</span>
+        }
+<span class="nc" id="L327">    }</span>
+
+    /**
+     * Gets the name of the server this game instance is on
+     * @return the name of the server
+     */
+    public String getServerName() {
+<span class="nc" id="L334">        return serverName;</span>
+    }
+
+    public void setServerName(String serverName) {
+<span class="nc" id="L338">        this.serverName = serverName;</span>
+<span class="nc" id="L339">    }</span>
+
+    @Override
+    public boolean equals(Object o) {
+<span class="fc bfc" id="L343" title="All 2 branches covered.">        if (this == o) return true;</span>
+
+<span class="fc bfc" id="L345" title="All 4 branches covered.">        if (o == null || getClass() != o.getClass()) return false;</span>
+
+<span class="fc" id="L347">        GameInstanceServer that = (GameInstanceServer) o;</span>
+
+<span class="fc" id="L349">        return new EqualsBuilder().appendSuper(super.equals(o)).append(questionNumber, that.questionNumber)</span>
+<span class="fc" id="L350">                .append(questionTime, GameInstanceServer.questionTime).append(gameController, that.gameController)</span>
+<span class="fc" id="L351">                .append(msgs, that.msgs).isEquals();</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="fc" id="L356">        return new HashCodeBuilder(17, 37).appendSuper(super.hashCode())</span>
+<span class="fc" id="L357">                .append(gameController).append(msgs).append(questionNumber)</span>
+<span class="fc" id="L358">                .append(questionTime).toHashCode();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

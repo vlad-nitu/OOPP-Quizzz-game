@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ActivityController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">server</a> &gt; <a href="index.source.html" class="el_package">server.api</a> &gt; <span class="el_source">ActivityController.java</span></div><h1>ActivityController.java</h1><pre class="source lang-java linenums">package server.api;
+
+import commons.Activity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.propertyeditors.URLEditor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import server.database.ActivityRepository;
+
+import java.beans.PropertyEditor;
+import java.util.*;
+
+@RestController
+@RequestMapping(&quot;/api/activities&quot;)
+public class ActivityController {
+
+    private final Random random;
+
+    private final ActivityRepository activityRepository;
+<span class="nc" id="L21">    private final Logger logger = LoggerFactory.getLogger(ActivityController.class);</span>
+
+<span class="nc" id="L23">    public ActivityController(Random random, ActivityRepository activityRepository) {</span>
+<span class="nc" id="L24">        this.random = random;</span>
+<span class="nc" id="L25">        this.activityRepository = activityRepository;</span>
+<span class="nc" id="L26">    }</span>
+
+
+    /**
+     * Gets all the activities from the activity repository
+     *
+     * @return all the activities from the activity repository
+     */
+    @GetMapping(path = {&quot;&quot;, &quot;/&quot;})
+    public List&lt;Activity&gt; getAll() {
+<span class="nc" id="L36">        return activityRepository.findAll();</span>
+    }
+
+    /**
+     * Adds an activity to the activity repository
+     *
+     * @param activity the activity to be added to the repo
+     * @return the activity that was added to the repo
+     */
+    @PostMapping(path = {&quot;&quot;, &quot;/&quot;})
+    public ResponseEntity&lt;Activity&gt; addActivity(@RequestBody Activity activity) {
+<span class="nc bnc" id="L47" title="All 2 branches missed.">        if (isNullOrEmpty(activity.getSource())</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">                || isNullOrEmpty(activity.getId())</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">                || !isValidUrl(activity.getSource())</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">                || isNullOrEmpty(activity.getTitle())</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">                || !isValidTitle(activity.getTitle())</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">                || activity.getConsumption_in_wh() &lt;= 0) {</span>
+<span class="nc" id="L53">            return ResponseEntity.badRequest().build();</span>
+        }
+<span class="nc" id="L55">        Activity savedActivity = activityRepository.save(new Activity(</span>
+<span class="nc" id="L56">                activity.getId(),</span>
+<span class="nc" id="L57">                activity.getImage_path(),</span>
+<span class="nc" id="L58">                activity.getTitle(),</span>
+<span class="nc" id="L59">                activity.getConsumption_in_wh(),</span>
+<span class="nc" id="L60">                activity.getSource()));</span>
+<span class="nc" id="L61">        return ResponseEntity.ok(savedActivity);</span>
+    }
+
+    private static boolean isNullOrEmpty(String s) {
+<span class="nc bnc" id="L65" title="All 4 branches missed.">        return s == null || s.isEmpty();</span>
+    }
+
+    /**
+     * Method that checks whether the source of an activity is a valid URL
+     *
+     * @param url - String object that is expected to be an URL
+     * @return - true, if the given string is an URL, or false otherwise.
+     */
+    private static boolean isValidUrl(String url) {
+        try {
+<span class="nc" id="L76">            PropertyEditor urlEditor = new URLEditor();</span>
+<span class="nc" id="L77">            urlEditor.setAsText(url);</span>
+<span class="nc" id="L78">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L79">            return false;</span>
+<span class="nc" id="L80">        }</span>
+<span class="nc" id="L81">        return true;</span>
+    }
+
+
+    /**
+     * Method that validates an activity title
+     * A valid title should have &lt;= 140 characters and be one-sentenced.
+     * Note that we consider a title to be valid even if it does not have an end of sentence punctuatio('.', '?' or '!'
+     *
+     * @param title - String object that needs to be validated
+     * @return - true, if the given title is valide, or false otherwise.
+     */
+    private static boolean isValidTitle(String title) {
+<span class="nc" id="L94">        int endOfSentence = 0;</span>
+<span class="nc" id="L95">        int size = title.length();</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        for (char ch : title.toCharArray()) {</span>
+<span class="nc bnc" id="L97" title="All 6 branches missed.">            if (ch == '.' || ch == '!' || ch == '?')</span>
+<span class="nc" id="L98">                endOfSentence++;</span>
+        }
+
+<span class="nc bnc" id="L101" title="All 4 branches missed.">        return size &lt;= 140 &amp;&amp; endOfSentence &lt;= 1;</span>
+    }
+
+
+    /**
+     * Updates a certain activity
+     *
+     * @param id the id of the activity to be updated
+     * @param activity the activity to be updated
+     * @return the updated activity
+     */
+    @PutMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Activity&gt; updateActivity(@PathVariable(&quot;id&quot;) long id, @RequestBody Activity activity) {
+<span class="nc" id="L114">        Optional&lt;Activity&gt; activityData = activityRepository.findById(id);</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">        if (activityData.isPresent()) {</span>
+<span class="nc" id="L116">            Activity newActivity = activityData.get();</span>
+<span class="nc bnc" id="L117" title="All 2 branches missed.">            if (!isNullOrEmpty(activity.getId())) newActivity.setId(activity.getId());</span>
+<span class="nc" id="L118">            newActivity.setImage_path(activity.getImage_path());</span>
+<span class="nc bnc" id="L119" title="All 4 branches missed.">            if (!isNullOrEmpty(activity.getTitle()) &amp;&amp; isValidTitle(activity.getTitle()))</span>
+<span class="nc" id="L120">                newActivity.setTitle(activity.getTitle());</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">            if (activity.getConsumption_in_wh() &gt; 0) newActivity.setConsumption_in_wh(activity.getConsumption_in_wh());</span>
+<span class="nc bnc" id="L122" title="All 4 branches missed.">            if (!isNullOrEmpty(activity.getSource()) &amp;&amp; isValidUrl(activity.getSource()))</span>
+<span class="nc" id="L123">                newActivity.setSource(activity.getSource());</span>
+<span class="nc" id="L124">            return ResponseEntity.ok(activityRepository.save(newActivity));</span>
+        }
+<span class="nc" id="L126">        return ResponseEntity.notFound().build();</span>
+    }
+
+
+    /**
+     * Deletes a certain activity
+     *
+     * @param id the id of the activity to be deleted
+     * @return the deleted activity
+     */
+    @DeleteMapping(&quot;/{id}&quot;)
+    public ResponseEntity&lt;Activity&gt; deleteActivity(@PathVariable(&quot;id&quot;) long id) {
+<span class="nc bnc" id="L138" title="All 2 branches missed.">        if (activityRepository.existsById(id)) {</span>
+<span class="nc" id="L139">            activityRepository.deleteById(id);</span>
+<span class="nc" id="L140">            return ResponseEntity.ok().build();</span>
+        }
+<span class="nc" id="L142">        return ResponseEntity.notFound().build();</span>
+    }
+
+
+    /**
+     * Gets a random activity from the activity repository
+     *
+     * @return the random activity
+     */
+    @GetMapping(&quot;/random&quot;)
+    public ResponseEntity&lt;Activity&gt; getRandom() {
+<span class="nc" id="L153">        List&lt;Activity&gt; allAct = getAll();</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">        if (allAct.isEmpty()) return ResponseEntity.notFound().build();</span>
+<span class="nc" id="L155">        int idx = random.nextInt(allAct.size());</span>
+<span class="nc" id="L156">        return ResponseEntity.ok(allAct.get(idx));</span>
+    }
+
+    /**
+     * GET API endpoint that 'smartly' generates 60 optional activities using a HashSet(for performance reasons)
+     * for one gameInstance. This method is used in the SinglePlayerGameCtrl when initialising one specific gameInstance, so that questions
+     * can be generated on the basis of our randomly selected activities.
+     *
+     * @return 200 OK - in case there is at least one activity that can be chosen, or 404 NOT_FOUND otherwise
+     */
+    @GetMapping(&quot;/random60&quot;)
+    public ResponseEntity&lt;List&lt;Activity&gt;&gt; getRandom60() {
+        //hard coded -&gt; size of all activities - 60
+<span class="nc" id="L169">        long countIds = activityRepository.count();</span>
+<span class="nc bnc" id="L170" title="All 2 branches missed.">        if (activityRepository.count() == 0) {</span>
+<span class="nc" id="L171">            logger.error(&quot;No activities found for lobby...&quot;);</span>
+<span class="nc" id="L172">            return ResponseEntity.notFound().build();</span>
+        }
+<span class="nc" id="L174">        int idRandom = (int) Math.abs(Math.random() * countIds) - 60;</span>
+<span class="nc" id="L175">        Set&lt;Activity&gt; setOfActivities = new HashSet&lt;&gt;();</span>
+<span class="nc" id="L176">        int limit = 60;</span>
+<span class="nc" id="L177">        int i = 0;</span>
+<span class="nc" id="L178">        long random_consumption = (long) ((Math.random() * (10000 - 50)) + 50);</span>
+<span class="nc" id="L179">        long random_consumption_max = random_consumption + (50 * random_consumption) / 100;</span>
+<span class="nc" id="L180">        long random_consumption_min = random_consumption - (50 * random_consumption) / 100;</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">        while (i &lt; limit) {</span>
+<span class="nc" id="L182">            Optional&lt;Activity&gt; a = activityRepository.findById((long) idRandom);</span>
+<span class="nc bnc" id="L183" title="All 6 branches missed.">            if (a.isPresent() &amp;&amp; !setOfActivities.contains(a.get()) &amp;&amp; a.get().getConsumption_in_wh() &lt;= random_consumption_max</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">                    &amp;&amp; a.get().getConsumption_in_wh() &gt;= random_consumption_min) {</span>
+<span class="nc" id="L185">                setOfActivities.add(a.get());</span>
+<span class="nc" id="L186">                i++;</span>
+            }
+<span class="nc" id="L188">            idRandom = (int) Math.abs(random.nextDouble() * countIds) - 60;</span>
+<span class="nc" id="L189">        }</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">        if (setOfActivities.isEmpty()) return ResponseEntity.notFound().build();</span>
+<span class="nc" id="L191">        List&lt;Activity&gt; listOfActivities = new ArrayList&lt;&gt;(setOfActivities);</span>
+<span class="nc" id="L192">        return ResponseEntity.ok(listOfActivities);</span>
+    }
+
+
+    /**
+     * Deletes all the activities in the activity repository
+     */
+    @DeleteMapping(&quot;/all&quot;)
+    public ResponseEntity&lt;Activity&gt; deleteAll() {
+<span class="nc" id="L201">        activityRepository.deleteAll();</span>
+<span class="nc" id="L202">        return ResponseEntity.ok().build();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>
